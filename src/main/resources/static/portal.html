@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificar SOAT — MegaSOAT</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand">Mega<span>SOAT</span></div>
+        <nav class="nav-links">
+            <a href="/">Inicio</a>
+            <a href="/portal.html">Verificar SOAT</a>
+            <a href="/ranking.html">Ranking</a>
+            <a href="/observatorio.html">Observatorio</a>
+            <a href="/dashboard.html" class="nav-auth" style="display:none">Dashboard</a>
+            <a href="/admin.html" class="nav-auth" style="display:none">Administración</a>
+        </nav>
+        <div class="nav-right">
+            <a href="/login" class="btn-nav-login nav-guest">Ingresar</a>
+            <div class="user-chip nav-auth" style="display:none">
+                <strong id="userLabel">—</strong>
+                <button class="btn-logout" onclick="logout()">Salir</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="panel" style="max-width:680px;margin:0 auto">
+            <h1>Verificar tu SOAT</h1>
+            <p class="lead">Consulta la validez de tu póliza SOAT ingresando el número de póliza o la placa de tu vehículo.</p>
+
+            <div style="display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap">
+                <button class="tab-btn active" id="btnByNumber" onclick="switchMode('number')">Por N° de póliza</button>
+                <button class="tab-btn" id="btnByPlate" onclick="switchMode('plate')">Por placa</button>
+            </div>
+
+            <div id="searchByNumber" class="search-mode">
+                <div class="form-group">
+                    <label>Número de póliza</label>
+                    <div class="verify-input-row">
+                        <input type="text" id="policyInput" placeholder="Ej: POL-001-2024" autocomplete="off">
+                        <button class="primary-button" onclick="searchByNumber()">Buscar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="searchByPlate" class="search-mode" style="display:none">
+                <div class="form-group">
+                    <label>Placa del vehículo</label>
+                    <div class="verify-input-row">
+                        <input type="text" id="plateInput" placeholder="Ej: ABC-123" autocomplete="off" style="text-transform:uppercase">
+                        <button class="primary-button" onclick="searchByPlate()">Buscar</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="resultArea" style="margin-top:20px"></div>
+        </div>
+
+        <div style="max-width:680px;margin:28px auto 0">
+            <div class="features" style="grid-template-columns:repeat(3,1fr)">
+                <div class="feature">
+                    <strong>100% oficial</strong>
+                    <span class="muted">Datos registrados directamente por puntos de venta autorizados.</span>
+                </div>
+                <div class="feature">
+                    <strong>Tiempo real</strong>
+                    <span class="muted">La información se actualiza en el momento del registro.</span>
+                </div>
+                <div class="feature">
+                    <strong>Sin registro</strong>
+                    <span class="muted">Cualquier ciudadano puede consultar sin crear una cuenta.</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/animations.js" defer></script>
+    <script>
+        function switchMode(mode) {
+            document.getElementById('searchByNumber').style.display = mode === 'number' ? 'block' : 'none';
+            document.getElementById('searchByPlate').style.display = mode === 'plate' ? 'block' : 'none';
+            document.getElementById('btnByNumber').classList.toggle('active', mode === 'number');
+            document.getElementById('btnByPlate').classList.toggle('active', mode === 'plate');
+            document.getElementById('resultArea').innerHTML = '';
+        }
+
+        async function searchByNumber() {
+            const val = document.getElementById('policyInput').value.trim();
+            if (!val) return;
+            await runSearch(`/api/portal/policies/${encodeURIComponent(val)}`, false);
+        }
+
+        async function searchByPlate() {
+            const val = document.getElementById('plateInput').value.trim().toUpperCase();
+            if (!val) return;
+            await runSearch(`/api/portal/policies/search?plate=${encodeURIComponent(val)}`, true);
+        }
+
+        async function runSearch(url, isList) {
+            const area = document.getElementById('resultArea');
+            area.innerHTML = '<div class="alert-empty">Buscando...</div>';
+            try {
+                const res = await fetch(url);
+                if (res.status === 404) { showNotFound(); return; }
+                const data = await res.json();
+                if (isList) {
+                    if (!data || data.length === 0) { showNotFound(); return; }
+                    area.innerHTML = data.map(renderCard).join('');
+                } else {
+                    area.innerHTML = renderCard(data);
+                }
+            } catch(e) {
+                area.innerHTML = '<div class="alert"><strong>Error de conexión</strong><p>No se pudo conectar al servidor.</p></div>';
+            }
+        }
+
+        function showNotFound() {
+            document.getElementById('resultArea').innerHTML = `
+                <div class="empty-state">
+                    <div style="font-size:2.5rem">🔍</div>
+                    <p>No se encontró ninguna póliza con ese criterio.</p>
+                </div>`;
+        }
+
+        function formatDate(d) {
+            if (!d) return '—';
+            return new Date(d).toLocaleDateString('es-PE', {day:'2-digit',month:'short',year:'numeric'});
+        }
+
+        function isExpired(dueDate) {
+            if (!dueDate) return false;
+            return new Date(dueDate) < new Date();
+        }
+
+        function renderCard(p) {
+            const expired = isExpired(p.dueDate);
+            const status = expired ? 'VENCIDA' : (p.status || 'ACTIVA');
+            const statusClass = expired ? 'high' : 'low';
+            const sealIcon = expired ? '⚠️' : '✅';
+            const sealText = expired ? 'Póliza vencida' : 'Póliza vigente y válida';
+            const sealSub = expired ? 'Esta póliza ya no tiene cobertura activa' : 'Registrada en el sistema MegaSOAT';
+            return `
+            <div class="policy-card">
+                <div class="seal">
+                    <div class="seal-icon">${sealIcon}</div>
+                    <div class="seal-text">
+                        <strong>${sealText}</strong>
+                        <span>${sealSub}</span>
+                    </div>
+                    <span class="badge ${statusClass}" style="margin-left:auto">${status}</span>
+                </div>
+                <div class="policy-detail-grid">
+                    <div class="policy-detail"><span>N° de póliza</span><strong>${p.policyNumber || '—'}</strong></div>
+                    <div class="policy-detail"><span>Placa</span><strong>${p.vehiclePlate || '—'}</strong></div>
+                    <div class="policy-detail"><span>Aseguradora</span><strong>${p.insurer || '—'}</strong></div>
+                    <div class="policy-detail"><span>Tipo de vehículo</span><strong>${p.vehicleType || '—'}</strong></div>
+                    <div class="policy-detail"><span>Fecha de emisión</span><strong>${formatDate(p.issueDate)}</strong></div>
+                    <div class="policy-detail"><span>Fecha de vencimiento</span><strong>${formatDate(p.dueDate)}</strong></div>
+                    <div class="policy-detail"><span>Prima</span><strong>S/ ${p.premium ? Number(p.premium).toFixed(2) : '—'}</strong></div>
+                    <div class="policy-detail"><span>Canal</span><strong>${p.channel || '—'}</strong></div>
+                </div>
+            </div>`;
+        }
+
+        document.getElementById('policyInput').addEventListener('keyup', e => { if(e.key==='Enter') searchByNumber(); });
+        document.getElementById('plateInput').addEventListener('keyup', e => { if(e.key==='Enter') searchByPlate(); });
+    </script>
+</body>
+</html>

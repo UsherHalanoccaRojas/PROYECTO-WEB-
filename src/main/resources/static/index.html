@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>MegaSOAT Web — Observatorio Inteligente</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand">Mega<span>SOAT</span></div>
+        <nav class="nav-links">
+            <a href="/">Inicio</a>
+            <a href="/portal.html">Verificar SOAT</a>
+            <a href="/ranking.html">Ranking</a>
+            <a href="/observatorio.html">Observatorio</a>
+            <a href="/dashboard.html" class="nav-auth" style="display:none">Dashboard</a>
+            <a href="/admin.html" class="nav-auth" style="display:none">Administración</a>
+        </nav>
+        <div class="nav-right">
+            <a href="/login" class="btn-nav-login nav-guest">Ingresar</a>
+            <div class="user-chip nav-auth" style="display:none">
+                <strong id="userLabel">—</strong>
+                <button class="btn-logout" onclick="logout()">Salir</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="panel fade-in-up" role="main" style="max-width:900px;margin:0 auto">
+
+            <div class="live-badge">Sistema en vivo · Datos en tiempo real</div>
+
+            <h1 style="font-size:3rem;line-height:1.1;margin-bottom:14px">
+                <span class="text-gradient">MegaSOAT Web</span>
+            </h1>
+            <p class="lead" style="max-width:600px;font-size:1.05rem">
+                Observatorio Inteligente de Riesgos y Morosidad para SOAT. Gestión segura de puntos de venta,
+                vouchers, pólizas y reportes de riesgo regional en tiempo real.
+            </p>
+
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:32px">
+                <a class="primary-button" href="/portal.html">🔍 Verificar mi SOAT</a>
+                <a class="btn-secondary" href="/observatorio.html">🗺️ Ver mapa de riesgos</a>
+            </div>
+
+            <div class="features">
+                <div class="feature stagger">
+                    <strong>🗺️ Mapa de riesgo</strong>
+                    <span class="muted">Visualiza la morosidad por ciudad y punto de venta con Leaflet interactivo.</span>
+                </div>
+                <div class="feature stagger">
+                    <strong>🏆 Top vendedores</strong>
+                    <span class="muted">Ranking de puntos de venta por volumen, morosidad y desempeño.</span>
+                </div>
+                <div class="feature stagger">
+                    <strong>🔍 Consultas rápidas</strong>
+                    <span class="muted">Verifica tu SOAT por número de póliza o placa. Sin registro necesario.</span>
+                </div>
+                <div class="feature stagger">
+                    <strong>🔒 Login seguro</strong>
+                    <span class="muted">Acceso al portal empresarial con JWT y control por roles.</span>
+                </div>
+                <div class="feature stagger">
+                    <strong>📊 Dashboard</strong>
+                    <span class="muted">Métricas en tiempo real, gráficas por aseguradora y ciudad.</span>
+                </div>
+                <div class="feature stagger">
+                    <strong>🚨 Anti-fraude</strong>
+                    <span class="muted">Detección automática de vouchers duplicados y sospechosos.</span>
+                </div>
+                <div class="feature stagger">
+                    <strong>🔔 Notificaciones</strong>
+                    <span class="muted">Alertas de vencimiento por correo y Telegram en tiempo real.</span>
+                </div>
+                <div class="feature stagger">
+                    <strong>🏗️ Arquitectura hexagonal</strong>
+                    <span class="muted">Escalable: soporta web, desktop y móvil sin cambios de dominio.</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- VERIFICACIÓN RÁPIDA -->
+    <section style="padding:32px 24px 64px;max-width:700px;margin:0 auto">
+        <div class="panel" style="text-align:center;padding:40px">
+            <h2 class="text-gradient" style="font-size:1.7rem;margin-bottom:8px">¿Tienes un SOAT?</h2>
+            <p style="color:var(--muted);margin-bottom:24px;font-size:.96rem">
+                Verifica la validez de tu póliza en segundos, sin crear una cuenta.
+            </p>
+            <div style="display:flex;gap:10px;max-width:440px;margin:0 auto">
+                <input id="quickPlate" type="text"
+                       placeholder="Ingresa tu placa..."
+                       style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:10px;padding:14px 18px;color:#e8edf5;font-size:.96rem;outline:none;transition:border-color .2s"
+                       onfocus="this.style.borderColor='rgba(34,212,96,0.5)'"
+                       onblur="this.style.borderColor='rgba(255,255,255,0.12)'">
+                <button class="primary-button" onclick="quickVerify()">Verificar</button>
+            </div>
+            <p style="margin-top:14px;font-size:.83rem;color:var(--muted)">
+                O busca por <a href="/portal.html" style="color:var(--accent)">número de póliza</a>
+            </p>
+            <div id="quickResult" style="margin-top:18px"></div>
+        </div>
+    </section>
+
+    <script src="/js/animations.js" defer></script>
+    <script>
+
+        async function quickVerify() {
+            const plate = document.getElementById('quickPlate').value.trim().toUpperCase();
+            if (!plate) return;
+            const area = document.getElementById('quickResult');
+            area.innerHTML = '<p style="color:var(--muted);font-size:.88rem">Buscando...</p>';
+            try {
+                const res = await fetch(`/api/portal/policies/search?plate=${encodeURIComponent(plate)}`);
+                const data = await res.json();
+                if (!data || data.length === 0) {
+                    area.innerHTML = '<p style="color:var(--muted);font-size:.88rem;margin-top:8px">No se encontró ninguna póliza para esa placa.</p>';
+                    return;
+                }
+                const p = data[0];
+                const expired = p.dueDate && new Date(p.dueDate) < new Date();
+                area.innerHTML = `
+                    <div style="display:flex;align-items:center;gap:14px;background:rgba(34,212,96,0.06);border:1px solid rgba(34,212,96,0.18);border-radius:12px;padding:16px 20px;text-align:left;margin-top:8px">
+                        <span style="font-size:2rem">${expired ? '⚠️' : '✅'}</span>
+                        <div>
+                            <strong style="display:block;color:${expired ? '#fca5a5' : 'var(--accent)'};font-size:.95rem">${expired ? 'Póliza VENCIDA' : 'Póliza VIGENTE'}</strong>
+                            <span style="font-size:.82rem;color:var(--muted)">N° ${p.policyNumber || '—'} · ${p.insurer} · Vence: ${p.dueDate || '—'}</span>
+                        </div>
+                        <a href="/portal.html" style="margin-left:auto;font-size:.82rem;color:var(--accent);white-space:nowrap">Ver detalles →</a>
+                    </div>`;
+            } catch(e) {
+                area.innerHTML = '<p style="color:var(--danger);font-size:.88rem">Error de conexión.</p>';
+            }
+        }
+
+        document.getElementById('quickPlate').addEventListener('keyup', e => { if (e.key === 'Enter') quickVerify(); });
+    </script>
+</body>
+</html>

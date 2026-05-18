@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — MegaSOAT</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/site.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand">Mega<span>SOAT</span></div>
+        <nav class="nav-links">
+            <a href="/">Inicio</a>
+            <a href="/portal.html">Verificar SOAT</a>
+            <a href="/ranking.html">Ranking</a>
+            <a href="/observatorio.html">Observatorio</a>
+            <a href="/dashboard.html" class="nav-auth" style="display:none">Dashboard</a>
+            <a href="/admin.html" class="nav-auth" style="display:none">Administración</a>
+        </nav>
+        <div class="nav-right">
+            <a href="/login" class="btn-nav-login nav-guest">Ingresar</a>
+            <div class="user-chip nav-auth" style="display:none">
+                <strong id="userLabel">—</strong>
+                <button class="btn-logout" onclick="logout()">Salir</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div style="margin-bottom:28px">
+            <h1 style="font-size:1.8rem;color:#f8fbfb">Panel de Control</h1>
+            <p style="color:var(--muted);font-size:.92rem">Resumen operativo en tiempo real · <span id="lastUpdate">—</span></p>
+        </div>
+
+        <!-- Stats cards -->
+        <div class="stats" id="statsGrid">
+            <div class="card accent-border">
+                <h2>Total pólizas</h2>
+                <strong id="totalPolicies">—</strong>
+                <small>registradas en el sistema</small>
+            </div>
+            <div class="card info-border">
+                <h2>Puntos de venta activos</h2>
+                <strong id="activePOS">—</strong>
+                <small>en operación</small>
+            </div>
+            <div class="card warn-border">
+                <h2>Morosidad promedio</h2>
+                <strong id="avgDelinquency">—</strong>
+                <small>pólizas vencidas / total</small>
+            </div>
+            <div class="card danger-border">
+                <h2>Alertas de fraude</h2>
+                <strong id="fraudAlerts">—</strong>
+                <small>vouchers sospechosos</small>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>Pólizas por aseguradora</h3>
+                <div class="chart-wrap"><canvas id="chartInsurer"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3>Ventas por ciudad</h3>
+                <div class="chart-wrap"><canvas id="chartCity"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Risk alerts + Ranking -->
+        <div class="dashboard-bottom" style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+            <div class="panel" style="padding:24px">
+                <div class="section-header">
+                    <h2>Alertas de riesgo</h2>
+                    <button class="btn-secondary btn-sm" onclick="loadAlerts()">↻ Actualizar</button>
+                </div>
+                <div id="alertsList"><div class="alert-empty">Cargando alertas...</div></div>
+            </div>
+
+            <div class="panel" style="padding:24px">
+                <div class="section-header">
+                    <h2>Top 5 puntos de venta</h2>
+                    <a href="/ranking.html" class="btn-secondary btn-sm">Ver todos</a>
+                </div>
+                <div id="topRanking"></div>
+            </div>
+        </div>
+
+        <!-- Quick nav -->
+        <div style="margin-top:28px">
+            <h2 style="font-size:1rem;color:var(--muted);margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px">Acceso rápido</h2>
+            <div class="features" style="grid-template-columns:repeat(5,1fr)">
+                <a href="/admin.html#users" class="feature" style="cursor:pointer">
+                    <strong>👥 Usuarios</strong>
+                    <span class="muted">Gestionar cuentas y roles</span>
+                </a>
+                <a href="/admin.html#pos" class="feature" style="cursor:pointer">
+                    <strong>🏪 Puntos de Venta</strong>
+                    <span class="muted">Alta, baja y métricas</span>
+                </a>
+                <a href="/admin.html#vouchers" class="feature" style="cursor:pointer">
+                    <strong>🧾 Vouchers</strong>
+                    <span class="muted">Registrar y conciliar</span>
+                </a>
+                <a href="/observatorio.html" class="feature" style="cursor:pointer">
+                    <strong>🗺️ Observatorio</strong>
+                    <span class="muted">Mapa de morosidad</span>
+                </a>
+                <a href="/portal.html" class="feature" style="cursor:pointer">
+                    <strong>🔍 Portal público</strong>
+                    <span class="muted">Verificar pólizas SOAT</span>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <script src="/js/animations.js" defer></script>
+    <script>
+        const token = localStorage.getItem('megaSoatToken');
+        if (!token) { window.location.href = '/login'; }
+        document.getElementById('lastUpdate').textContent = new Date().toLocaleString('es-PE');
+
+        function authHeaders() {
+            return token ? { 'Authorization': 'Bearer ' + token } : {};
+        }
+
+        async function loadStats() {
+            try {
+                const res = await fetch('/api/dashboard/stats', { headers: authHeaders() });
+                const data = await res.json();
+                document.getElementById('totalPolicies').textContent = data.totalPolicies ?? '—';
+                document.getElementById('activePOS').textContent = data.activePointsOfSale ?? '—';
+                document.getElementById('avgDelinquency').textContent = (data.averageDelinquency ?? 0).toFixed(1) + '%';
+                document.getElementById('fraudAlerts').textContent = data.fraudAlerts ?? '0';
+            } catch(e) { console.error('stats', e); }
+        }
+
+        const CHART_COLORS = ['#1DB954','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#10b981'];
+
+        async function loadCharts() {
+            try {
+                const [insRes, cityRes] = await Promise.all([
+                    fetch('/api/reports/metrics/insurer', { headers: authHeaders() }),
+                    fetch('/api/reports/metrics/city', { headers: authHeaders() })
+                ]);
+                const insData = await insRes.json();
+                const cityData = await cityRes.json();
+
+                new Chart(document.getElementById('chartInsurer'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(insData),
+                        datasets: [{ data: Object.values(insData), backgroundColor: CHART_COLORS, borderWidth: 0 }]
+                    },
+                    options: {
+                        plugins: { legend: { position: 'bottom', labels: { color: '#9ca3af', font: { size: 11 } } } },
+                        responsive: true, maintainAspectRatio: false
+                    }
+                });
+
+                new Chart(document.getElementById('chartCity'), {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(cityData),
+                        datasets: [{
+                            label: 'Pólizas',
+                            data: Object.values(cityData),
+                            backgroundColor: 'rgba(29,185,84,0.7)',
+                            borderRadius: 6
+                        }]
+                    },
+                    options: {
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { color: '#9ca3af', font: { size: 11 } }, grid: { display: false } },
+                            y: { ticks: { color: '#9ca3af', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } }
+                        },
+                        responsive: true, maintainAspectRatio: false
+                    }
+                });
+            } catch(e) { console.error('charts', e); }
+        }
+
+        async function loadAlerts() {
+            const el = document.getElementById('alertsList');
+            el.innerHTML = '<div class="alert-empty">Cargando...</div>';
+            try {
+                const res = await fetch('/api/dashboard/alerts', { headers: authHeaders() });
+                const data = await res.json();
+                if (!data || data.length === 0) {
+                    el.innerHTML = '<div class="alert-empty">✅ Sin alertas activas</div>';
+                    return;
+                }
+                el.innerHTML = data.map(a => `
+                    <div class="alert ${a.risk === 'medio' ? 'medium' : ''}">
+                        <strong>${a.name} · ${a.city}</strong>
+                        <p>Morosidad: ${a.delinquency.toFixed(1)}% · SOAT vendidos: ${a.sales} · Riesgo: <strong style="color:inherit">${a.risk.toUpperCase()}</strong></p>
+                    </div>`).join('');
+            } catch(e) {
+                el.innerHTML = '<div class="alert"><strong>Error</strong><p>No se pudieron cargar las alertas.</p></div>';
+            }
+        }
+
+        async function loadTopRanking() {
+            const el = document.getElementById('topRanking');
+            try {
+                const res = await fetch('/api/dashboard/ranking');
+                const data = await res.json();
+                const top = data.slice(0, 5);
+                const maxSales = Math.max(...top.map(t => t.sales), 1);
+                const medals = ['🥇','🥈','🥉'];
+                el.innerHTML = top.map((item, i) => `
+                    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+                        <span style="font-size:1.3rem;width:28px;text-align:center">${medals[i] || (i+1)}</span>
+                        <div style="flex:1;min-width:0">
+                            <div style="font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.name}</div>
+                            <div style="font-size:.78rem;color:var(--muted)">${item.city} · ${item.sales} pólizas</div>
+                        </div>
+                        <span class="badge ${item.delinquency>=10?'high':item.delinquency>=5?'medium':'low'}">${item.delinquency.toFixed(1)}%</span>
+                    </div>`).join('');
+            } catch(e) {
+                el.innerHTML = '<div class="alert-empty">Sin datos</div>';
+            }
+        }
+
+        loadStats();
+        loadCharts();
+        loadAlerts();
+        loadTopRanking();
+    </script>
+</body>
+</html>

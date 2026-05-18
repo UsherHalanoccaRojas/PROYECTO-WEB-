@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administración — MegaSOAT</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+    <header class="topbar">
+        <div class="brand">Mega<span>SOAT</span></div>
+        <nav class="nav-links">
+            <a href="/">Inicio</a>
+            <a href="/portal.html">Verificar SOAT</a>
+            <a href="/ranking.html">Ranking</a>
+            <a href="/observatorio.html">Observatorio</a>
+            <a href="/dashboard.html" class="nav-auth" style="display:none">Dashboard</a>
+            <a href="/admin.html" class="nav-auth" style="display:none">Administración</a>
+        </nav>
+        <div class="nav-right">
+            <a href="/login" class="btn-nav-login nav-guest">Ingresar</a>
+            <div class="user-chip nav-auth" style="display:none">
+                <strong id="userLabel">—</strong>
+                <button class="btn-logout" onclick="logout()">Salir</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div style="margin-bottom:24px">
+            <h1 style="font-size:1.7rem;color:#f8fbfb">Administración</h1>
+            <p style="color:var(--muted);font-size:.9rem">Gestión de usuarios, puntos de venta y vouchers</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('users')">👥 Usuarios</button>
+            <button class="tab-btn" onclick="switchTab('pos')">🏪 Puntos de Venta</button>
+            <button class="tab-btn" onclick="switchTab('vouchers')">🧾 Vouchers</button>
+            <button class="tab-btn" onclick="switchTab('policies')">📄 Pólizas</button>
+            <button class="tab-btn" onclick="switchTab('fraud')">🚨 Detección Fraude</button>
+        </div>
+
+        <!-- ─── USUARIOS ─── -->
+        <div id="tab-users" class="tab-panel active">
+            <div class="section-header">
+                <h2>Usuarios del sistema</h2>
+                <button class="primary-button btn-sm" onclick="openModal('modalNewUser')">+ Nuevo usuario</button>
+            </div>
+            <div class="table-wrap">
+                <table class="table">
+                    <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+                    <tbody id="usersBody"><tr><td colspan="5" class="alert-empty">Cargando...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ─── PUNTOS DE VENTA ─── -->
+        <div id="tab-pos" class="tab-panel">
+            <div class="section-header">
+                <h2>Puntos de venta</h2>
+                <button class="primary-button btn-sm" onclick="openModal('modalNewPOS')">+ Nuevo PV</button>
+            </div>
+            <div class="table-wrap">
+                <table class="table">
+                    <thead><tr><th>Código</th><th>Nombre</th><th>Ciudad</th><th>Responsable</th><th>Email</th><th>Estado</th><th>Acciones</th></tr></thead>
+                    <tbody id="posBody"><tr><td colspan="7" class="alert-empty">Cargando...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ─── VOUCHERS ─── -->
+        <div id="tab-vouchers" class="tab-panel">
+            <div class="section-header">
+                <h2>Vouchers registrados</h2>
+                <button class="primary-button btn-sm" onclick="openModal('modalNewVoucher')">+ Registrar voucher</button>
+            </div>
+            <div class="table-wrap">
+                <table class="table">
+                    <thead><tr><th>N° Operación</th><th>Banco</th><th>Monto</th><th>Fecha</th><th>Registrado por</th><th>Estado</th><th>Acciones</th></tr></thead>
+                    <tbody id="vouchersBody"><tr><td colspan="7" class="alert-empty">Cargando...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ─── PÓLIZAS ─── -->
+        <div id="tab-policies" class="tab-panel">
+            <div class="section-header">
+                <h2>Pólizas SOAT</h2>
+                <div class="search-bar" style="margin-bottom:0;flex:1;max-width:400px;margin-left:16px">
+                    <input id="policySearchInput" type="text" placeholder="Buscar por placa...">
+                    <button class="btn-secondary btn-sm" onclick="searchPolicies()">Buscar</button>
+                </div>
+            </div>
+            <div class="table-wrap" style="margin-top:16px">
+                <table class="table">
+                    <thead><tr><th>N° Póliza</th><th>Placa</th><th>Aseguradora</th><th>Tipo vehículo</th><th>Prima</th><th>Vencimiento</th><th>Estado</th></tr></thead>
+                    <tbody id="policiesBody"><tr><td colspan="7" class="alert-empty">Cargando...</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ─── FRAUDE ─── -->
+        <div id="tab-fraud" class="tab-panel">
+            <div class="section-header">
+                <h2>Vouchers con sospecha de fraude</h2>
+                <button class="btn-secondary btn-sm" onclick="loadFraud()">↻ Actualizar</button>
+            </div>
+            <div id="fraudList"></div>
+        </div>
+    </main>
+
+    <!-- ─── MODAL: Nuevo usuario ─── -->
+    <div class="modal-overlay" id="modalNewUser">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal('modalNewUser')">×</button>
+            <h2>Nuevo usuario</h2>
+            <div class="form-row cols-2">
+                <div class="form-group"><label>Nombre completo</label><input id="uFullName" type="text"></div>
+                <div class="form-group"><label>Email</label><input id="uEmail" type="email"></div>
+            </div>
+            <div class="form-row cols-2">
+                <div class="form-group"><label>Contraseña</label><input id="uPassword" type="password"></div>
+                <div class="form-group"><label>Rol</label>
+                    <select id="uRole">
+                        <option value="COMERCIAL">COMERCIAL</option>
+                        <option value="ADMIN">ADMIN</option>
+                        <option value="SUPERADMIN">SUPERADMIN</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="primary-button" onclick="createUser()">Crear usuario</button>
+                <button class="btn-secondary" onclick="closeModal('modalNewUser')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── MODAL: Nuevo PV ─── -->
+    <div class="modal-overlay" id="modalNewPOS">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal('modalNewPOS')">×</button>
+            <h2>Nuevo punto de venta</h2>
+            <div class="form-row cols-2">
+                <div class="form-group"><label>Nombre</label><input id="posName" type="text"></div>
+                <div class="form-group"><label>Ciudad</label><input id="posCity" type="text"></div>
+            </div>
+            <div class="form-row cols-2">
+                <div class="form-group"><label>Responsable</label><input id="posResponsible" type="text"></div>
+                <div class="form-group"><label>Email</label><input id="posEmail" type="email"></div>
+            </div>
+            <div class="form-row cols-2">
+                <div class="form-group"><label>Teléfono</label><input id="posTelefono" type="text"></div>
+                <div class="form-group"><label>Dirección</label><input id="posDireccion" type="text"></div>
+            </div>
+            <div class="form-actions">
+                <button class="primary-button" onclick="createPOS()">Crear PV</button>
+                <button class="btn-secondary" onclick="closeModal('modalNewPOS')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── MODAL: Nuevo voucher ─── -->
+    <div class="modal-overlay" id="modalNewVoucher">
+        <div class="modal">
+            <button class="modal-close" onclick="closeModal('modalNewVoucher')">×</button>
+            <h2>Registrar voucher</h2>
+            <div class="form-row cols-2">
+                <div class="form-group"><label>N° Operación</label><input id="vOpNum" type="text"></div>
+                <div class="form-group"><label>Banco</label><input id="vBank" type="text" placeholder="BCP, BBVA, Interbank..."></div>
+            </div>
+            <div class="form-row cols-2">
+                <div class="form-group"><label>Monto (S/)</label><input id="vAmount" type="number" step="0.01"></div>
+                <div class="form-group"><label>Tipo</label>
+                    <select id="vType">
+                        <option value="DEPOSITO">DEPOSITO</option>
+                        <option value="TRANSFERENCIA">TRANSFERENCIA</option>
+                        <option value="EFECTIVO">EFECTIVO</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row cols-2">
+                <div class="form-group"><label>Fecha operación</label><input id="vDate" type="date"></div>
+                <div class="form-group"><label>Registrado por</label><input id="vRegisteredBy" type="text"></div>
+            </div>
+            <div class="form-actions">
+                <button class="primary-button" onclick="createVoucher()">Registrar</button>
+                <button class="btn-secondary" onclick="closeModal('modalNewVoucher')">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script src="/js/animations.js" defer></script>
+    <script>
+        const token = localStorage.getItem('megaSoatToken');
+        if (!token) { window.location.href = '/login'; }
+
+        const H = () => ({ 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' });
+
+        function showToast(msg, type = 'success') {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast ' + type + ' show';
+            setTimeout(() => t.className = 'toast', 3000);
+        }
+
+        // ── TABS ──
+        const tabNames = ['users','pos','vouchers','policies','fraud'];
+        function switchTab(name) {
+            tabNames.forEach(t => {
+                document.getElementById('tab-' + t).classList.remove('active');
+            });
+            document.getElementById('tab-' + name).classList.add('active');
+            document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.remove('active'));
+            document.querySelectorAll('.tab-btn')[tabNames.indexOf(name)].classList.add('active');
+
+            const loaders = { users: loadUsers, pos: loadPOS, vouchers: loadVouchers, policies: loadPolicies, fraud: loadFraud };
+            if (loaders[name]) loaders[name]();
+        }
+
+        // Handle anchor-based tab navigation
+        if (window.location.hash) {
+            const h = window.location.hash.replace('#','');
+            if (tabNames.includes(h)) switchTab(h);
+        }
+
+        // ── MODALS ──
+        function openModal(id) { document.getElementById(id).classList.add('open'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+        document.querySelectorAll('.modal-overlay').forEach(m => {
+            m.addEventListener('click', e => { if(e.target === m) m.classList.remove('open'); });
+        });
+
+        // ── USERS ──
+        async function loadUsers() {
+            try {
+                const res = await fetch('/api/users', { headers: H() });
+                const data = await res.json();
+                const tbody = document.getElementById('usersBody');
+                if (!data.length) { tbody.innerHTML = '<tr><td colspan="5" class="alert-empty">Sin usuarios</td></tr>'; return; }
+                tbody.innerHTML = data.map(u => `
+                    <tr>
+                        <td><strong>${u.fullName || u.username}</strong></td>
+                        <td>${u.email}</td>
+                        <td><span class="badge info">${(u.role?.authority||'—').replace('ROLE_','')}</span></td>
+                        <td><span class="badge ${u.active!==false?'low':'high'}">${u.active!==false?'Activo':'Inactivo'}</span></td>
+                        <td>
+                            <select class="btn-sm" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:#e6eef1;border-radius:6px;padding:4px 8px" onchange="assignRole('${u.email}',this.value)">
+                                <option value="">Cambiar rol</option>
+                                <option value="COMERCIAL">COMERCIAL</option>
+                                <option value="ADMIN">ADMIN</option>
+                                <option value="SUPERADMIN">SUPERADMIN</option>
+                            </select>
+                        </td>
+                    </tr>`).join('');
+            } catch(e) {
+                document.getElementById('usersBody').innerHTML = '<tr><td colspan="5" class="alert-empty">Error al cargar</td></tr>';
+            }
+        }
+
+        async function createUser() {
+            const body = {
+                fullName: document.getElementById('uFullName').value,
+                email: document.getElementById('uEmail').value,
+                password: document.getElementById('uPassword').value,
+                roles: [document.getElementById('uRole').value]
+            };
+            if (!body.fullName || !body.email || !body.password) { showToast('Completa todos los campos','error'); return; }
+            try {
+                const res = await fetch('/api/auth/register', { method:'POST', headers: H(), body: JSON.stringify(body) });
+                if (res.ok) { closeModal('modalNewUser'); loadUsers(); showToast('Usuario creado'); }
+                else showToast('Error al crear usuario','error');
+            } catch(e) { showToast('Error de red','error'); }
+        }
+
+        async function assignRole(email, role) {
+            if (!role) return;
+            try {
+                const res = await fetch('/api/users/assign-role', { method:'POST', headers: H(), body: JSON.stringify({ email, role }) });
+                if (res.ok) { loadUsers(); showToast(`Rol ${role} asignado a ${email}`); }
+                else showToast('Error al asignar rol','error');
+            } catch(e) { showToast('Error de red','error'); }
+        }
+
+        // ── POS ──
+        async function loadPOS() {
+            try {
+                const res = await fetch('/api/points-of-sale', { headers: H() });
+                const data = await res.json();
+                const tbody = document.getElementById('posBody');
+                if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" class="alert-empty">Sin puntos de venta</td></tr>'; return; }
+                tbody.innerHTML = data.map(p => `
+                    <tr>
+                        <td><code style="color:var(--accent)">${p.codigo||'—'}</code></td>
+                        <td><strong>${p.name}</strong></td>
+                        <td>${p.city}</td>
+                        <td>${p.responsible||'—'}</td>
+                        <td>${p.email||'—'}</td>
+                        <td><span class="badge ${p.active||p.activo?'low':'high'}">${p.active||p.activo?'Activo':'Inactivo'}</span></td>
+                        <td>
+                            <button class="btn-danger btn-sm" onclick="deactivatePOS(${p.id})">Desactivar</button>
+                        </td>
+                    </tr>`).join('');
+            } catch(e) {
+                document.getElementById('posBody').innerHTML = '<tr><td colspan="7" class="alert-empty">Error al cargar</td></tr>';
+            }
+        }
+
+        async function createPOS() {
+            const body = {
+                name: document.getElementById('posName').value,
+                city: document.getElementById('posCity').value,
+                responsible: document.getElementById('posResponsible').value,
+                email: document.getElementById('posEmail').value,
+                telefono: document.getElementById('posTelefono').value,
+                direccion: document.getElementById('posDireccion').value
+            };
+            if (!body.name || !body.city) { showToast('Nombre y ciudad son requeridos','error'); return; }
+            try {
+                const res = await fetch('/api/points-of-sale', { method:'POST', headers: H(), body: JSON.stringify(body) });
+                if (res.ok) { closeModal('modalNewPOS'); loadPOS(); showToast('Punto de venta creado'); }
+                else showToast('Error al crear punto de venta','error');
+            } catch(e) { showToast('Error de red','error'); }
+        }
+
+        async function deactivatePOS(id) {
+            if (!confirm('¿Desactivar este punto de venta?')) return;
+            try {
+                const res = await fetch(`/api/points-of-sale/${id}/deactivate`, { method:'POST', headers: H() });
+                if (res.ok) { loadPOS(); showToast('Punto de venta desactivado'); }
+                else showToast('Error','error');
+            } catch(e) { showToast('Error de red','error'); }
+        }
+
+        // ── VOUCHERS ──
+        async function loadVouchers() {
+            try {
+                const res = await fetch('/api/vouchers', { headers: H() });
+                const data = await res.json();
+                const tbody = document.getElementById('vouchersBody');
+                if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" class="alert-empty">Sin vouchers</td></tr>'; return; }
+                tbody.innerHTML = data.map(v => `
+                    <tr>
+                        <td><code style="color:var(--accent)">${v.operationNumber}</code></td>
+                        <td>${v.bank}</td>
+                        <td>S/ ${Number(v.amount).toFixed(2)}</td>
+                        <td>${v.operationDate||'—'}</td>
+                        <td>${v.registeredBy||'—'}</td>
+                        <td>
+                            ${v.fraudSuspected?'<span class="badge high">Fraude</span>':''}
+                            ${v.reconciled?'<span class="badge low">Conciliado</span>':'<span class="badge medium">Pendiente</span>'}
+                        </td>
+                        <td>
+                            ${!v.reconciled?`<button class="btn-secondary btn-sm" onclick="reconcile(${v.id})">Conciliar</button>`:''}
+                        </td>
+                    </tr>`).join('');
+            } catch(e) {
+                document.getElementById('vouchersBody').innerHTML = '<tr><td colspan="7" class="alert-empty">Error al cargar</td></tr>';
+            }
+        }
+
+        async function createVoucher() {
+            const body = {
+                operationNumber: document.getElementById('vOpNum').value,
+                bank: document.getElementById('vBank').value,
+                amount: parseFloat(document.getElementById('vAmount').value),
+                type: document.getElementById('vType').value,
+                operationDate: document.getElementById('vDate').value || null,
+                registeredBy: document.getElementById('vRegisteredBy').value
+            };
+            if (!body.operationNumber || !body.bank || !body.amount) { showToast('Completa los campos requeridos','error'); return; }
+            try {
+                const res = await fetch('/api/vouchers', { method:'POST', headers: H(), body: JSON.stringify(body) });
+                if (res.ok) {
+                    const v = await res.json();
+                    closeModal('modalNewVoucher');
+                    loadVouchers();
+                    showToast(v.fraudSuspected ? '⚠️ Voucher registrado — posible fraude detectado' : 'Voucher registrado', v.fraudSuspected?'error':'success');
+                } else showToast('Error al registrar voucher','error');
+            } catch(e) { showToast('Error de red','error'); }
+        }
+
+        async function reconcile(id) {
+            try {
+                const res = await fetch(`/api/vouchers/${id}/reconcile`, { method:'POST', headers: H() });
+                if (res.ok) { loadVouchers(); showToast('Voucher conciliado'); }
+                else showToast('Error al conciliar','error');
+            } catch(e) { showToast('Error de red','error'); }
+        }
+
+        // ── PÓLIZAS ──
+        async function loadPolicies() {
+            try {
+                const res = await fetch('/api/portal/policies', { headers: H() });
+                const data = await res.json();
+                renderPolicies(data);
+            } catch(e) {
+                document.getElementById('policiesBody').innerHTML = '<tr><td colspan="7" class="alert-empty">Error al cargar</td></tr>';
+            }
+        }
+
+        async function searchPolicies() {
+            const plate = document.getElementById('policySearchInput').value.trim();
+            if (!plate) { loadPolicies(); return; }
+            try {
+                const res = await fetch(`/api/portal/policies/search?plate=${encodeURIComponent(plate)}`, { headers: H() });
+                renderPolicies(await res.json());
+            } catch(e) {}
+        }
+
+        function renderPolicies(data) {
+            const tbody = document.getElementById('policiesBody');
+            if (!data || !data.length) { tbody.innerHTML = '<tr><td colspan="7" class="alert-empty">Sin pólizas</td></tr>'; return; }
+            tbody.innerHTML = data.map(p => {
+                const exp = p.dueDate && new Date(p.dueDate) < new Date();
+                return `<tr>
+                    <td><strong>${p.policyNumber||'—'}</strong></td>
+                    <td>${p.vehiclePlate}</td>
+                    <td>${p.insurer}</td>
+                    <td>${p.vehicleType}</td>
+                    <td>S/ ${Number(p.premium).toFixed(2)}</td>
+                    <td>${p.dueDate||'—'}</td>
+                    <td><span class="badge ${exp?'high':'low'}">${exp?'VENCIDA':'ACTIVA'}</span></td>
+                </tr>`;}).join('');
+        }
+
+        // ── FRAUDE ──
+        async function loadFraud() {
+            const el = document.getElementById('fraudList');
+            try {
+                const res = await fetch('/api/reports/fraud/detected', { headers: H() });
+                const data = await res.json();
+                if (!data.length) { el.innerHTML = '<div class="alert-empty">✅ Sin vouchers sospechosos detectados</div>'; return; }
+                el.innerHTML = `<div class="table-wrap"><table class="table">
+                    <thead><tr><th>N° Operación</th><th>Banco</th><th>Monto</th><th>Fecha</th><th>Registrado por</th></tr></thead>
+                    <tbody>${data.map(v=>`<tr>
+                        <td><code style="color:var(--danger)">${v.operationNumber}</code></td>
+                        <td>${v.bank}</td>
+                        <td>S/ ${Number(v.amount).toFixed(2)}</td>
+                        <td>${v.operationDate||'—'}</td>
+                        <td>${v.registeredBy||'—'}</td>
+                    </tr>`).join('')}</tbody>
+                </table></div>`;
+            } catch(e) {
+                el.innerHTML = '<div class="alert"><strong>Error</strong><p>No se pudo cargar la lista de fraude.</p></div>';
+            }
+        }
+
+        // Load first tab
+        loadUsers();
+    </script>
+</body>
+</html>
