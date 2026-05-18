@@ -67,14 +67,21 @@ public class AuthController {
         }
     }
 
-    @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
-        UserAccount user = new UserAccount(request.getFullName(), request.getEmail(), request.getPassword());
-        List<RoleName> roles = request.getRoles().stream()
-                .map(role -> RoleName.fromValue(role.replace("ROLE_", "")))
-                .collect(Collectors.toList());
-        UserAccount saved = userManagementPort.register(user, roles);
-        String token = jwtTokenProvider.generateToken(saved.getEmail(), java.util.Set.of(saved.getRole().getAuthority()));
-        return ResponseEntity.ok(new AuthResponse(token, saved.getEmail(), java.util.Set.of(saved.getRole().getAuthority())));
-    }
+@PostMapping("/register")
+public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
+    UserAccount user = new UserAccount(request.getFullName(), request.getEmail(), request.getPassword());
+    List<RoleName> roles = request.getRoles().stream()
+            .map(role -> RoleName.fromValue(role.replace("ROLE_", "")))
+            .collect(Collectors.toList());
+    UserAccount saved = userManagementPort.register(user, roles);
+
+    // Un solo rol
+    Set<String> authorities = Set.of(saved.getRol());
+
+    String token = jwtTokenProvider.generateToken(saved.getEmail(), authorities);
+    return ResponseEntity.ok(new AuthResponse(token, saved.getEmail(), authorities));
+}
+
+
+
 }

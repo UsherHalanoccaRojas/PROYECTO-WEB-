@@ -92,20 +92,37 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.11.0</version>
-				<configuration>
-					<release>${java.version}</release>
-				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
-		</plugins>
-	</build>
+                                <build>
+                                    <plugins>
+                                        <!-- Compilador -->
+                                        <plugin>
+                                            <groupId>org.apache.maven.plugins</groupId>
+                                            <artifactId>maven-compiler-plugin</artifactId>
+                                            <version>3.11.0</version>
+                                            <configuration>
+                                                <release>${java.version}</release>
+                                            </configuration>
+                                        </plugin>
+
+                                        <!-- Spring Boot plugin: detecta automáticamente DemoApplication -->
+                                        <plugin>
+                                            <groupId>org.springframework.boot</groupId>
+                                            <artifactId>spring-boot-maven-plugin</artifactId>
+                                            <version>4.0.6</version>
+                                            <configuration>
+                                                <mainClass>com.example.demo.DemoApplication</mainClass>
+                                            </configuration>
+                                        </plugin>
+
+                                        <!-- Exec plugin opcional: útil si quieres ejecutar con mvn exec:java -->
+                                        <plugin>
+                                            <groupId>org.codehaus.mojo</groupId>
+                                            <artifactId>exec-maven-plugin</artifactId>
+                                            <version>3.5.1</version>
+                                            <configuration>
+                                                <mainClass>com.example.demo.DemoApplication</mainClass>
+                                            </configuration>
+                                        </plugin>
+                                    </plugins>
+                                </build>
 </project>

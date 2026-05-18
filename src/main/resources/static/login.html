@@ -87,6 +87,23 @@
         .login-field {
             margin-bottom: 14px;
         }
+        .login-field input#captchaAnswer {
+        width: 100%;
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 10px;
+        padding: 12px 16px;
+        color: var(--text);
+        font-size: .95rem;
+        font-family: inherit;
+        outline: none;
+        transition: border-color .2s, box-shadow .2s;
+        }
+         .login-field input#captchaAnswer:focus {
+        border-color: rgba(34,212,96,0.5);
+        box-shadow: 0 0 0 3px rgba(34,212,96,0.08);
+         }
+
         .login-field label {
             display: block;
             font-size: .75rem;
@@ -195,26 +212,28 @@
 
             <div class="login-field">
                 <label>Correo electrónico</label>
-                <input id="email" type="email" placeholder="usuario@empresa.com"
-                       value="superadmin@megasoat.com" autocomplete="email">
+                <input id="email" type="email" 
+                       autocomplete="email">
             </div>
 
             <div class="login-field">
                 <label>Contraseña</label>
-                <input id="password" type="password" placeholder="••••••••"
-                       value="123456" autocomplete="current-password">
+                <input id="password" type="password" 
+                       autocomplete="current-password">
             </div>
 
-            <!-- Captcha -->
-            <div id="captchaField" style="display:none">
-                <label style="display:block;font-size:.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px">
-                    Código de verificación
-                </label>
+            <div class="login-field">
+                <label for="captchaAnswer">Código de verificación</label>
                 <div class="captcha-row">
                     <div class="captcha-display" id="captchaCode"></div>
                     <button class="btn-refresh" id="refreshCaptcha" type="button">↻ Nuevo</button>
                 </div>
+                <!-- Campo de texto con mismo diseño que usuario/contraseña -->
+                <input id="captchaAnswer" type="text" placeholder="Ingrese el código" required>
+                <input type="hidden" id="captchaId" name="captchaId" value="">
             </div>
+
+
 
             <button id="loginButton" class="primary-button btn-login">Iniciar sesión</button>
 

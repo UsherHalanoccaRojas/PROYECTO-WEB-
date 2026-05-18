@@ -10,4 +10,9 @@ public class LoginController {
     public String login() {
         return "forward:/login.html";
     }
+
+    @GetMapping("/profile")
+    public String profile() {
+        return "forward:/profile.html";
+    }
 }

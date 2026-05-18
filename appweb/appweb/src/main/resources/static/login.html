@@ -9,68 +9,67 @@
 <body>
     <header class="topbar">
         <div class="brand">MegaSOAT</div>
-        <nav class="nav-links"><a href="/">Inicio</a><a href="/ranking.html">Ranking</a><a href="/observatorio.html">Observatorio</a></nav>
+        <nav class="nav-links">
+            <a href="/">Inicio</a>
+            <a href="/ranking.html">Ranking</a>
+            <a href="/observatorio.html">Observatorio</a>
+            <span id="navAuth"><a href="/login">Login</a></span>
+        </nav>
     </header>
     <main class="container">
         <div class="panel" style="max-width:480px;margin:48px auto;padding:32px" role="main">
             <h1 style="text-align:center;margin-bottom:24px">Ingreso</h1>
             <div class="field" style="margin-bottom:14px">
-                <input id="email" type="email" placeholder="Correo" value="superadmin@megasoat.com" style="width:100%;padding:10px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);color:#fff" required>
+                <input id="email" type="email" placeholder="Correo" style="width:100%;padding:10px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);color:#fff" required>
             </div>
             <div class="field" style="margin-bottom:14px">
-                <input id="password" type="password" placeholder="Contraseña" value="123456" style="width:100%;padding:10px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);color:#fff" required>
+                <input id="password" type="password" placeholder="Contraseña" style="width:100%;padding:10px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);color:#fff" required>
             </div>
-            <div id="captchaField" style="display:none;margin-bottom:14px">
-                <div style="display:flex;gap:8px;align-items:center">
-                    <div style="flex:1;padding:10px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02);color:#fff;text-align:center;font-family:monospace;font-size:1.1rem;font-weight:bold;color:var(--accent)" id="captchaCode"></div>
-                    <button id="refreshCaptcha" class="primary-button" style="padding:10px 14px;font-size:0.9rem" type="button">↻ Nuevo</button>
-                </div>
+            <div class="field" style="margin-bottom:14px;padding:12px;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.02)">
+                <div style="margin-bottom:8px;font-size:0.9rem;color:#aaa">Código de seguridad:</div>
+                <div id="captchaText" style="font-weight:bold;font-size:1.2rem;letter-spacing:2px;margin-bottom:10px;font-family:monospace">Cargando...</div>
+                <input id="captchaAnswer" type="text" placeholder="Ingresa el código" style="width:100%;padding:8px;border-radius:4px;border:1px solid rgba(255,255,255,0.1);background:rgba(0,0,0,0.2);color:#fff" required>
             </div>
             <button id="loginButton" class="primary-button" style="width:100%;padding:12px;font-size:1rem">Iniciar sesión</button>
             <div id="message" class="message" style="margin-top:12px;text-align:center"></div>
         </div>
     </main>
-    <script src="/js/animations.js" defer></script>
-    <script>
-        const button = document.getElementById('loginButton');
-        const messageElement = document.getElementById('message');
-        const captchaField = document.getElementById('captchaField');
-        const captchaCode = document.getElementById('captchaCode');
-        const refreshCaptcha = document.getElementById('refreshCaptcha');
-        let currentCaptchaId = null;
-        let currentCaptchaAnswer = null;
 
-        async function loadCaptcha(){
-            try{
-                const r = await fetch('/api/auth/captcha');
-                if(!r.ok) throw new Error('No fue posible cargar captcha');
-                const j = await r.json();
-                currentCaptchaId = j.id;
-                currentCaptchaAnswer = j.question;
-                captchaCode.textContent = j.question;
-                captchaField.style.display = 'block';
-            }catch(e){
-                captchaField.style.display = 'none';
-                currentCaptchaId = null;
+    <script src="/js/animations.js" defer></script>
+    <script src="/js/api-interceptor.js" defer></script>
+    <script src="/js/nav-auth.js" defer></script>
+    <script>
+        let currentCaptchaId = null;
+
+        async function loadCaptcha() {
+            try {
+                const response = await fetch('/api/auth/captcha');
+                const data = await response.json();
+                currentCaptchaId = data.id;
+                document.getElementById('captchaText').textContent = data.question;
+                document.getElementById('captchaAnswer').value = '';
+            } catch (error) {
+                console.error('Error cargando captcha:', error);
+                document.getElementById('captchaText').textContent = 'ERROR';
             }
         }
 
-        // load on startup
-        loadCaptcha();
-
-        // reload captcha on button click
-        refreshCaptcha.addEventListener('click', (ev)=>{
-            ev.preventDefault();
-            loadCaptcha();
-        });
+        const button = document.getElementById('loginButton');
+        const messageElement = document.getElementById('message');
 
         button.addEventListener('click', async () => {
             messageElement.textContent = '';
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value.trim();
+            const captchaAnswer = document.getElementById('captchaAnswer').value.trim();
 
             if (!email || !password) {
                 showMessage('Por favor completa todos los campos', 'error');
+                return;
+            }
+
+            if (!captchaAnswer) {
+                showMessage('Por favor ingresa el código de seguridad', 'error');
                 return;
             }
 
@@ -78,20 +77,51 @@
                 const response = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password, captchaId: currentCaptchaId, captchaAnswer: currentCaptchaAnswer })
+                    body: JSON.stringify({
+                        email,
+                        password,
+                        captchaId: currentCaptchaId,
+                        captchaAnswer: captchaAnswer
+                    })
                 });
 
                 if (!response.ok) {
-                    if(response.status === 400) throw new Error('Captcha expirado - toca ↻ Nuevo');
-                    if(response.status === 401) throw new Error('Correo o contraseña inválida');
+                    if (response.status === 401) throw new Error('Correo o contraseña inválida');
+                    if (response.status === 400) throw new Error('Código de seguridad inválido o expirado');
                     throw new Error('Error de autenticación');
                 }
+
                 const body = await response.json();
                 localStorage.setItem('megaSoatToken', body.token);
-                localStorage.setItem('megaSoatUser', body.email);
+
+                try {
+                    const profileResponse = await fetch('/api/auth/me', {
+                        headers: {
+                            Authorization: 'Bearer ' + body.token
+                        }
+                    });
+
+                    if (profileResponse.ok) {
+                        const profile = await profileResponse.json();
+                        localStorage.setItem('megaSoatUser', profile.username || profile.fullName || body.email);
+                    } else {
+                        localStorage.setItem('megaSoatUser', body.email);
+                    }
+                } catch (profileError) {
+                    localStorage.setItem('megaSoatUser', body.email);
+                }
+
                 showMessage('✓ Ingreso exitoso', 'success');
+                
+                // Notificar a nav-auth.js que el localStorage cambió
+                window.dispatchEvent(new StorageEvent('storage', {
+                    key: 'megaSoatToken',
+                    newValue: body.token,
+                    storageArea: localStorage
+                }));
+
                 setTimeout(() => {
-                    window.location.href = '/observatorio.html';
+                    window.location.href = '/';
                 }, 400);
             } catch (error) {
                 showMessage(error.message || 'Error de autenticación', 'error');
@@ -103,6 +133,8 @@
             messageElement.textContent = text;
             messageElement.className = 'message ' + type;
         }
+
+        loadCaptcha();
     </script>
 </body>
 </html>

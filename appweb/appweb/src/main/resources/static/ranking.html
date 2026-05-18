@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
+<!DOCTYPE html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,7 +11,7 @@
 <body>
     <header class="topbar">
         <div class="brand">MegaSOAT</div>
-        <nav class="nav-links"><a href="/">Inicio</a><a href="/observatorio.html">Observatorio</a><a href="/login">Login</a></nav>
+        <nav class="nav-links"><a href="/">Inicio</a><a href="/observatorio.html">Observatorio</a><span id="navAuth"><a href="/login">Login</a></span></nav>
     </header>
     <main class="container">
         <div class="panel">
@@ -39,6 +41,7 @@
         </div>
     </main>
     <script src="/js/animations.js" defer></script>
+    <script src="/js/nav-auth.js" defer></script>
     <script>
         const badgeClass = ratio => ratio >= 5 ? 'high' : ratio >= 3 ? 'medium' : 'low';
 

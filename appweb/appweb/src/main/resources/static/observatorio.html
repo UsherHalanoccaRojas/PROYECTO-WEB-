@@ -9,7 +9,7 @@
 <body>
     <header class="topbar">
         <div class="brand">MegaSOAT</div>
-        <nav class="nav-links"><a href="/">Inicio</a><a href="/ranking.html">Ranking</a><a href="/login">Login</a></nav>
+        <nav class="nav-links"><a href="/">Inicio</a><a href="/ranking.html">Ranking</a><span id="navAuth"><a href="/login">Login</a></span></nav>
     </header>
     <main class="container">
         <div class="panel">
@@ -37,6 +37,7 @@
         </div>
     </main>
     <script src="/js/animations.js" defer></script>
+    <script src="/js/nav-auth.js" defer></script>
     <script>
         const coordinates = {
             "Lima": {x: 60, y: 160},

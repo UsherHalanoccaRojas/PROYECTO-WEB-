@@ -2,7 +2,6 @@ package com.example.demo.application.service;
 
 import com.example.demo.application.port.in.NotificationPort;
 import com.example.demo.infrastructure.service.EmailSender;
-import com.example.demo.infrastructure.service.TelegramSender;
 import com.example.demo.infrastructure.service.WebSocketPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,12 +11,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class NotificationService implements NotificationPort {
 
     private final EmailSender emailSender;
-    private final TelegramSender telegramSender;
     private final WebSocketPublisher webSocketPublisher;
 
-    public NotificationService(EmailSender emailSender, TelegramSender telegramSender, WebSocketPublisher webSocketPublisher) {
+    public NotificationService(EmailSender emailSender, WebSocketPublisher webSocketPublisher) {
         this.emailSender = emailSender;
-        this.telegramSender = telegramSender;
         this.webSocketPublisher = webSocketPublisher;
     }
 
@@ -27,12 +24,8 @@ public class NotificationService implements NotificationPort {
     }
 
     @Override
-    public void sendTelegramAlert(String message) {
-        telegramSender.sendMessage(message);
-    }
-
-    @Override
     public void publishRealtimeNotification(String topic, String message) {
         webSocketPublisher.publish(topic, message);
     }
 }
+

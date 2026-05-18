@@ -4,24 +4,27 @@ import com.example.demo.application.exception.DuplicateResourceException;
 import com.example.demo.application.exception.ResourceNotFoundException;
 import com.example.demo.application.port.in.NotificationPort;
 import com.example.demo.application.port.in.VoucherPort;
+import com.example.demo.domain.event.VoucherDuplicatedEvent;
 import com.example.demo.domain.model.Voucher;
 import com.example.demo.infrastructure.persistence.VoucherRepository;
+import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import org.springframework.context.ApplicationEventPublisher;
 
 @Service
 @Transactional
 public class VoucherReconciliationService implements VoucherPort {
 
     private final VoucherRepository voucherRepository;
-    private final NotificationPort notificationPort;
+    private final ApplicationEventPublisher eventPublisher;
 
     public VoucherReconciliationService(VoucherRepository voucherRepository,
-                                        NotificationPort notificationPort) {
+                                        ApplicationEventPublisher eventPublisher) {
         this.voucherRepository = voucherRepository;
-        this.notificationPort = notificationPort;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -30,11 +33,12 @@ public class VoucherReconciliationService implements VoucherPort {
         if (!duplicates.isEmpty()) {
             voucher.setDuplicate(true);
             voucher.setFraudSuspected(true);
-            notificationPort.sendTelegramAlert("Duplicado detectado para voucher " + voucher.getOperationNumber());
+            eventPublisher.publishEvent(new VoucherDuplicatedEvent(voucher.getOperationNumber()));
             throw new DuplicateResourceException("Voucher duplicado detectado: " + voucher.getOperationNumber());
         }
+
         voucher.setValidated(false);
-        voucher.setRegisteredAt(voucher.getRegisteredAt() == null ? java.time.LocalDateTime.now() : voucher.getRegisteredAt());
+        voucher.setRegisteredAt(voucher.getRegisteredAt() == null ? LocalDateTime.now() : voucher.getRegisteredAt());
         return voucherRepository.save(voucher);
     }
 

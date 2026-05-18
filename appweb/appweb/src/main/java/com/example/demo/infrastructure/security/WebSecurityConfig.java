@@ -38,10 +38,15 @@ public class WebSecurityConfig {
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(authenticationEntryPoint))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/", "/index.html", "/login", "/login.html", "/observatorio.html", "/ranking.html", "/favicon.ico", "/css/**", "/js/**", "/images/**", "/webjars/**", "/api/auth/login", "/api/auth/register").permitAll()
+                        // Rutas públicas (sin autenticación)
+                        .requestMatchers("/", "/index.html", "/login", "/login.html", "/favicon.ico", "/css/**", "/js/**", "/images/**", "/webjars/**", "/profile.html").permitAll()
+                        .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
                         .requestMatchers("/api/auth/**", "/h2-console/**", "/ws/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/portal/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/dashboard/**").permitAll()
+                        // Rutas protegidas (requieren autenticación)
+                        .requestMatchers("/observatorio.html", "/ranking.html").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/portal/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/dashboard/**").authenticated()
+                        // Todas las demás solicitudes requieren autenticación
                         .anyRequest().authenticated())
                 .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

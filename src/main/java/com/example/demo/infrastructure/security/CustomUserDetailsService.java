@@ -2,6 +2,7 @@ package com.example.demo.infrastructure.security;
 
 import com.example.demo.domain.model.UserAccount;
 import com.example.demo.infrastructure.persistence.UserRepository;
+import java.util.Set;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,21 +21,25 @@ public class CustomUserDetailsService implements UserDetailsService {
         this.userRepository = userRepository;
     }
 
-    @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        UserAccount account = userRepository.findByEmail(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + username));
+@Override
+public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+    UserAccount account = userRepository.findByEmail(username)
+            .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + username));
 
-        return new User(
-                account.getEmail(),
-                account.getPassword(),
-                account.isActive(),
-                true,
-                true,
-                true,
-                account.getRole() != null
-                        ? java.util.Set.of(new SimpleGrantedAuthority(account.getRole().getAuthority()))
-                        : java.util.Set.of()
-        );
-    }
+    // Un solo rol como autoridad
+    Set<SimpleGrantedAuthority> authorities =
+            Set.of(new SimpleGrantedAuthority(account.getRol()));
+
+    return new User(
+            account.getEmail(),
+            account.getPassword(),
+            account.isActive(),
+            true,
+            true,
+            true,
+            authorities
+    );
 }
+
+}
+
