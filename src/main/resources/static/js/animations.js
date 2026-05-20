@@ -1,4 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const AUTH_REDIRECT = '/login';
+
+  function hasAuthToken() {
+    return Boolean(localStorage.getItem('megaSoatToken'));
+  }
+
+  function requireAuth(redirectTo = AUTH_REDIRECT) {
+    if (hasAuthToken()) return true;
+    window.location.replace(redirectTo);
+    return false;
+  }
+
+  window.requireAuth = requireAuth;
 
   // ══════════════════════════════════════
   // INYECTAR SISTEMA DE FONDO (4 capas)
@@ -32,6 +45,11 @@ document.addEventListener('DOMContentLoaded', () => {
   (function initNav() {
     const token = localStorage.getItem('megaSoatToken');
     const user  = localStorage.getItem('megaSoatUser');
+
+    if (document.body?.dataset.requiresAuth === 'true' && !token) {
+      window.location.replace(AUTH_REDIRECT);
+      return;
+    }
 
     // Mostrar/ocultar items según auth
     document.querySelectorAll('.nav-auth').forEach(el => {
@@ -157,8 +175,20 @@ document.addEventListener('DOMContentLoaded', () => {
   window.logout = function() {
     localStorage.removeItem('megaSoatToken');
     localStorage.removeItem('megaSoatUser');
-    window.location.href = '/';
+    window.location.replace(AUTH_REDIRECT);
   };
+
+  window.addEventListener('storage', event => {
+    if (event.key === 'megaSoatToken' && !event.newValue && document.body?.dataset.requiresAuth === 'true') {
+      window.location.replace(AUTH_REDIRECT);
+    }
+  });
+
+  window.addEventListener('pageshow', () => {
+    if (document.body?.dataset.requiresAuth === 'true') {
+      requireAuth();
+    }
+  });
 
   // ══════════════════════════════════════
   // ANIMACIONES DE ENTRADA (feature cards)

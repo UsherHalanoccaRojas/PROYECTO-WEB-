@@ -3,6 +3,7 @@ package com.example.demo.web;
 import com.example.demo.application.port.in.UserManagementPort;
 import com.example.demo.domain.model.RoleName;
 import com.example.demo.domain.model.UserAccount;
+import com.example.demo.infrastructure.service.CaptchaService;
 import com.example.demo.infrastructure.security.JwtTokenProvider;
 import com.example.demo.infrastructure.persistence.UserRepository;
 import com.example.demo.web.dto.AuthResponse;
@@ -35,13 +36,13 @@ public class AuthController {
     private final UserManagementPort userManagementPort;
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
-    private final com.example.demo.infrastructure.service.CaptchaService captchaService;
+    private final CaptchaService captchaService;
 
     public AuthController(AuthenticationManager authenticationManager,
                           UserManagementPort userManagementPort,
                           UserRepository userRepository,
                           JwtTokenProvider jwtTokenProvider,
-                          com.example.demo.infrastructure.service.CaptchaService captchaService) {
+                          CaptchaService captchaService) {
         this.authenticationManager = authenticationManager;
         this.userManagementPort = userManagementPort;
         this.userRepository = userRepository;
@@ -50,7 +51,7 @@ public class AuthController {
     }
 
     @GetMapping("/captcha")
-    public ResponseEntity<com.example.demo.infrastructure.service.CaptchaService.Captcha> generateCaptcha() {
+    public ResponseEntity<CaptchaService.Captcha> generateCaptcha() {
         return ResponseEntity.ok(captchaService.generate());
     }
 

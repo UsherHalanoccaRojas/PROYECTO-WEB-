@@ -52,7 +52,7 @@
             border-radius: 18px;
             padding: 40px 36px;
             box-shadow:
-                0 0 0 1px rgba(34,212,96,0.06),
+                0 0 0 1px rgba(var(--accent-rgb),0.06),
                 0 24px 64px rgba(0,0,0,0.6),
                 inset 0 1px 0 rgba(255,255,255,0.07);
             position: relative;
@@ -63,7 +63,7 @@
             position: absolute;
             top: -80px; right: -80px;
             width: 220px; height: 220px;
-            background: radial-gradient(circle, rgba(34,212,96,0.10), transparent 65%);
+            background: radial-gradient(circle, rgba(var(--accent-rgb),0.10), transparent 65%);
             pointer-events: none;
         }
 
@@ -100,8 +100,8 @@
         transition: border-color .2s, box-shadow .2s;
         }
          .login-field input#captchaAnswer:focus {
-        border-color: rgba(34,212,96,0.5);
-        box-shadow: 0 0 0 3px rgba(34,212,96,0.08);
+        border-color: rgba(var(--accent-rgb),0.5);
+        box-shadow: 0 0 0 3px rgba(var(--accent-rgb),0.08);
          }
 
         .login-field label {
@@ -126,8 +126,8 @@
             transition: border-color .2s, box-shadow .2s;
         }
         .login-field input:focus {
-            border-color: rgba(34,212,96,0.5);
-            box-shadow: 0 0 0 3px rgba(34,212,96,0.08);
+            border-color: rgba(var(--accent-rgb),0.5);
+            box-shadow: 0 0 0 3px rgba(var(--accent-rgb),0.08);
         }
 
         /* Captcha */
@@ -141,8 +141,8 @@
             flex: 1;
             padding: 11px 16px;
             border-radius: 10px;
-            border: 1px solid rgba(34,212,96,0.2);
-            background: rgba(34,212,96,0.05);
+            border: 1px solid rgba(var(--accent-rgb),0.2);
+            background: rgba(var(--accent-rgb),0.05);
             color: var(--accent);
             text-align: center;
             font-family: 'Courier New', monospace;
@@ -166,6 +166,10 @@
         /* Botón login */
         .btn-login {
             width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
             padding: 14px;
             font-size: .97rem;
             border-radius: 10px;

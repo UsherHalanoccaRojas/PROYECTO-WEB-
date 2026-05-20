@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/site.css">
 </head>
-<body>
+<body data-requires-auth="true">
     <header class="topbar">
         <div class="brand">Mega<span>SOAT</span></div>
         <nav class="nav-links">
@@ -23,7 +23,7 @@
             <a href="/login" class="btn-nav-login nav-guest">Ingresar</a>
             <div class="user-chip nav-auth" style="display:none">
                 <strong id="userLabel">—</strong>
-                <button class="btn-logout" onclick="logout()">Salir</button>
+                <button class="btn-logout" onclick="logout()">Cerrar sesión</button>
             </div>
         </div>
     </header>
@@ -87,7 +87,9 @@
 
         async function loadRanking() {
             try {
-                const res = await fetch('/api/dashboard/ranking');
+                const token = localStorage.getItem('megaSoatToken');
+                const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+                const res = await fetch('/api/dashboard/ranking', { headers });
                 const data = await res.json();
 
                 // Stats
@@ -114,7 +116,7 @@
                             <div style="font-size:2.2rem;margin-bottom:8px">${displayMedals[vi]}</div>
                             <div style="font-weight:700;color:#fff;font-size:.92rem;margin-bottom:4px">${item.name}</div>
                             <div style="font-size:.8rem;color:var(--muted);margin-bottom:10px">${item.city}</div>
-                            <div style="background:rgba(29,185,84,${vi===1?'0.25':'0.12'});border:1px solid rgba(29,185,84,0.2);border-radius:10px 10px 0 0;height:${displayHeights[vi]};display:flex;align-items:flex-end;justify-content:center;padding-bottom:12px">
+                            <div style="background:rgba(6,182,212,${vi===1?'0.25':'0.12'});border:1px solid rgba(6,182,212,0.2);border-radius:10px 10px 0 0;height:${displayHeights[vi]};display:flex;align-items:flex-end;justify-content:center;padding-bottom:12px">
                                 <span style="font-size:1.2rem;font-weight:700;color:var(--accent)">${item.sales}</span>
                             </div>
                         </div>`).join('');

@@ -38,10 +38,12 @@ public class WebSecurityConfig {
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(authenticationEntryPoint))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/", "/index.html", "/login", "/login.html", "/observatorio.html", "/ranking.html", "/portal.html", "/dashboard.html", "/admin.html", "/favicon.ico", "/css/**", "/js/**", "/images/**", "/webjars/**", "/api/auth/login", "/api/auth/register").permitAll()
+                    .requestMatchers("/login", "/login.html", "/favicon.ico", "/css/**", "/js/**", "/images/**", "/webjars/**", "/api/auth/login", "/api/auth/register").permitAll()
+                    // Permitir carga de páginas estáticas para que la SPA maneje el guardado/lectura del token
+                    .requestMatchers("/", "/index.html", "/portal.html", "/ranking.html", "/observatorio.html", "/dashboard.html", "/admin.html").permitAll()
                         .requestMatchers("/api/auth/**", "/h2-console/**", "/ws/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/portal/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/dashboard/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/dashboard/**").authenticated()
                         .anyRequest().authenticated())
                 .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

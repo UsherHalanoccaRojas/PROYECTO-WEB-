@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="/css/site.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
-<body>
+<body data-requires-auth="true">
     <header class="topbar">
         <div class="brand">Mega<span>SOAT</span></div>
         <nav class="nav-links">
@@ -24,7 +24,7 @@
             <a href="/login" class="btn-nav-login nav-guest">Ingresar</a>
             <div class="user-chip nav-auth" style="display:none">
                 <strong id="userLabel">—</strong>
-                <button class="btn-logout" onclick="logout()">Salir</button>
+                <button class="btn-logout" onclick="logout()">Cerrar sesión</button>
             </div>
         </div>
     </header>
@@ -90,32 +90,6 @@
             </div>
         </div>
 
-        <!-- Quick nav -->
-        <div style="margin-top:28px">
-            <h2 style="font-size:1rem;color:var(--muted);margin-bottom:14px;text-transform:uppercase;letter-spacing:.5px">Acceso rápido</h2>
-            <div class="features" style="grid-template-columns:repeat(5,1fr)">
-                <a href="/admin.html#users" class="feature" style="cursor:pointer">
-                    <strong>👥 Usuarios</strong>
-                    <span class="muted">Gestionar cuentas y roles</span>
-                </a>
-                <a href="/admin.html#pos" class="feature" style="cursor:pointer">
-                    <strong>🏪 Puntos de Venta</strong>
-                    <span class="muted">Alta, baja y métricas</span>
-                </a>
-                <a href="/admin.html#vouchers" class="feature" style="cursor:pointer">
-                    <strong>🧾 Vouchers</strong>
-                    <span class="muted">Registrar y conciliar</span>
-                </a>
-                <a href="/observatorio.html" class="feature" style="cursor:pointer">
-                    <strong>🗺️ Observatorio</strong>
-                    <span class="muted">Mapa de morosidad</span>
-                </a>
-                <a href="/portal.html" class="feature" style="cursor:pointer">
-                    <strong>🔍 Portal público</strong>
-                    <span class="muted">Verificar pólizas SOAT</span>
-                </a>
-            </div>
-        </div>
     </main>
 
     <script src="/js/animations.js" defer></script>
@@ -139,7 +113,7 @@
             } catch(e) { console.error('stats', e); }
         }
 
-        const CHART_COLORS = ['#1DB954','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#10b981'];
+        const CHART_COLORS = ['#06b6d4','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#0ea5e9','#f97316','#14b8a6'];
 
         async function loadCharts() {
             try {
@@ -169,7 +143,7 @@
                         datasets: [{
                             label: 'Pólizas',
                             data: Object.values(cityData),
-                            backgroundColor: 'rgba(29,185,84,0.7)',
+                            backgroundColor: 'rgba(6,182,212,0.7)',
                             borderRadius: 6
                         }]
                     },
@@ -208,7 +182,7 @@
         async function loadTopRanking() {
             const el = document.getElementById('topRanking');
             try {
-                const res = await fetch('/api/dashboard/ranking');
+                const res = await fetch('/api/dashboard/ranking', { headers: authHeaders() });
                 const data = await res.json();
                 const top = data.slice(0, 5);
                 const maxSales = Math.max(...top.map(t => t.sales), 1);

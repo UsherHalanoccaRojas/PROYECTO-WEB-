@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/site.css">
 </head>
-<body>
+<body data-requires-auth="true">
     <header class="topbar">
         <div class="brand">Mega<span>SOAT</span></div>
         <nav class="nav-links">
@@ -23,7 +23,7 @@
             <a href="/login" class="btn-nav-login nav-guest">Ingresar</a>
             <div class="user-chip nav-auth" style="display:none">
                 <strong id="userLabel">—</strong>
-                <button class="btn-logout" onclick="logout()">Salir</button>
+                <button class="btn-logout" onclick="logout()">Cerrar sesión</button>
             </div>
         </div>
     </header>
@@ -106,7 +106,18 @@
             area.innerHTML = '<div class="alert-empty">Buscando...</div>';
             try {
                 const res = await fetch(url);
+                // Manejo de errores HTTP
                 if (res.status === 404) { showNotFound(); return; }
+                if (res.status === 401 || res.status === 403) {
+                    area.innerHTML = '<div class="alert"><strong>Acceso denegado</strong><p>Debe iniciar sesión para acceder a esta consulta.</p></div>';
+                    return;
+                }
+                // Si el servidor responde con HTML (p. ej. redirect a login), mostrar mensaje claro
+                const contentType = res.headers.get('content-type') || '';
+                if (!res.ok || !contentType.includes('application/json')) {
+                    area.innerHTML = '<div class="alert"><strong>Error</strong><p>Respuesta inesperada del servidor.</p></div>';
+                    return;
+                }
                 const data = await res.json();
                 if (isList) {
                     if (!data || data.length === 0) { showNotFound(); return; }

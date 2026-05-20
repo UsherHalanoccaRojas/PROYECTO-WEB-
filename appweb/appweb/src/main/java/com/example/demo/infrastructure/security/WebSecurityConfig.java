@@ -42,9 +42,9 @@ public class WebSecurityConfig {
                         .requestMatchers("/", "/index.html", "/login", "/login.html", "/favicon.ico", "/css/**", "/js/**", "/images/**", "/webjars/**", "/profile.html").permitAll()
                         .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
                         .requestMatchers("/api/auth/**", "/h2-console/**", "/ws/**").permitAll()
-                        // Rutas protegidas (requieren autenticación)
-                        .requestMatchers("/observatorio.html", "/ranking.html").authenticated()
-                        .requestMatchers(HttpMethod.GET, "/api/portal/**").authenticated()
+                        // Rutas protegidas (requieren autenticación) — las páginas estáticas se cargan públicamente
+                        .requestMatchers("/observatorio.html", "/ranking.html").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/portal/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/dashboard/**").authenticated()
                         // Todas las demás solicitudes requieren autenticación
                         .anyRequest().authenticated())

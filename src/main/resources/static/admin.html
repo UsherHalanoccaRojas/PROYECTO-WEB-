@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/site.css">
 </head>
-<body>
+<body data-requires-auth="true">
     <header class="topbar">
         <div class="brand">Mega<span>SOAT</span></div>
         <nav class="nav-links">
@@ -23,7 +23,7 @@
             <a href="/login" class="btn-nav-login nav-guest">Ingresar</a>
             <div class="user-chip nav-auth" style="display:none">
                 <strong id="userLabel">—</strong>
-                <button class="btn-logout" onclick="logout()">Salir</button>
+                <button class="btn-logout" onclick="logout()">Cerrar sesión</button>
             </div>
         </div>
     </header>
