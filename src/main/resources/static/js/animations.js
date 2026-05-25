@@ -1,3 +1,9 @@
+// Tema — inicializar ANTES del render para evitar flash
+(function() {
+  const saved = localStorage.getItem('megaSoatTheme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
   const AUTH_REDIRECT = '/login';
 
@@ -59,8 +65,198 @@ document.addEventListener('DOMContentLoaded', () => {
       el.style.display = token ? 'none' : '';
     });
 
-    // Nombre de usuario
-    document.querySelectorAll('#userLabel').forEach(el => { if (user) el.textContent = user; });
+    // Nombre de usuario — inyectar avatar + nombre en el chip
+    document.querySelectorAll('#userLabel').forEach(el => {
+      const chip = el.closest('.user-chip');
+      if (!chip) { if (user) el.textContent = user; return; }
+
+      const username = user ? user.split('@')[0] : '?';
+      const initials = username.slice(0,2).toUpperCase();
+
+      // Detectar rol del token JWT (payload base64)
+      let rolLabel = '';
+      try {
+        const tok = localStorage.getItem('megaSoatToken');
+        if (tok) {
+          const payload = JSON.parse(atob(tok.split('.')[1]));
+          const roles = (payload.roles || '').replace('ROLE_','').split(',');
+          rolLabel = roles[0] || '';
+        }
+      } catch(e) {}
+
+      chip.innerHTML = `
+        <a class="user-chip-avatar" id="chipAvatar" href="/perfil.html" title="Mi perfil">${initials}</a>
+        <div class="user-chip-info">
+          <span class="user-chip-name">${username}</span>
+          ${rolLabel ? `<span class="user-chip-role">${rolLabel}</span>` : ''}
+        </div>
+        <a href="/perfil.html" class="btn-profile" title="Mi perfil">⚙</a>
+        <button class="btn-logout" onclick="logout()">Salir</button>`;
+
+      // Cargar avatar desde API si existe
+      if (token) {
+        fetch('/api/users/me', { headers: { 'Authorization': 'Bearer ' + token } })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (!data || !data.avatarUrl) return;
+            const avatarEl = document.getElementById('chipAvatar');
+            if (avatarEl) {
+              avatarEl.innerHTML = `<img src="${data.avatarUrl}" alt="avatar" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;">`;
+            }
+          }).catch(() => {});
+      }
+    });
+
+    // ── THEME TOGGLE ──
+    const navRight = document.querySelector('.nav-right');
+    if (navRight) {
+      function getTheme() { return document.documentElement.getAttribute('data-theme') || 'dark'; }
+      function renderThemeBtn(btn) {
+        const isDark = getTheme() === 'dark';
+        btn.innerHTML = isDark
+          ? '<span class="theme-icon">☀️</span><span class="theme-label">Claro</span>'
+          : '<span class="theme-icon">🌙</span><span class="theme-label">Oscuro</span>';
+        btn.setAttribute('title', isDark ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro');
+      }
+      const themeBtn = document.createElement('button');
+      themeBtn.className = 'theme-toggle';
+      renderThemeBtn(themeBtn);
+      themeBtn.addEventListener('click', () => {
+        const next = getTheme() === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('megaSoatTheme', next);
+        renderThemeBtn(themeBtn);
+        document.querySelectorAll('.theme-toggle-drawer').forEach(b => renderDrawerThemeBtn(b));
+      });
+      navRight.insertBefore(themeBtn, navRight.firstChild);
+    }
+
+    // ── BÚSQUEDA GLOBAL ──
+    if (navRight) {
+      const searchBtn = document.createElement('button');
+      searchBtn.className = 'global-search-btn';
+      searchBtn.setAttribute('title', 'Buscar (Ctrl+K)');
+      searchBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span class="global-search-label">Buscar…</span><kbd>Ctrl K</kbd>';
+      navRight.insertBefore(searchBtn, navRight.firstChild);
+
+      // Overlay
+      const searchOverlay = document.createElement('div');
+      searchOverlay.className = 'search-overlay';
+      searchOverlay.innerHTML = `
+        <div class="search-modal">
+          <div class="search-input-row">
+            <svg class="search-icon-modal" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="search-input-main" id="globalSearchInput" placeholder="Buscar pólizas, usuarios, puntos de venta…" autocomplete="off" spellcheck="false">
+            <button class="search-close-btn" id="searchCloseBtn">Esc</button>
+          </div>
+          <div class="search-results" id="searchResults">
+            <p class="search-hint">Escribe al menos 2 caracteres para buscar</p>
+          </div>
+        </div>`;
+      document.body.appendChild(searchOverlay);
+
+      let searchTimer = null;
+
+      function openSearch() {
+        searchOverlay.classList.add('open');
+        document.getElementById('globalSearchInput').focus();
+        document.body.style.overflow = 'hidden';
+      }
+      function closeSearch() {
+        searchOverlay.classList.remove('open');
+        document.body.style.overflow = '';
+        document.getElementById('searchResults').innerHTML = '<p class="search-hint">Escribe al menos 2 caracteres para buscar</p>';
+        document.getElementById('globalSearchInput').value = '';
+      }
+
+      searchBtn.addEventListener('click', openSearch);
+      document.getElementById('searchCloseBtn').addEventListener('click', closeSearch);
+      searchOverlay.addEventListener('click', e => { if (e.target === searchOverlay) closeSearch(); });
+      document.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); openSearch(); }
+        if (e.key === 'Escape') closeSearch();
+      });
+
+      document.getElementById('globalSearchInput').addEventListener('input', function() {
+        clearTimeout(searchTimer);
+        const q = this.value.trim();
+        const resultsEl = document.getElementById('searchResults');
+        if (q.length < 2) {
+          resultsEl.innerHTML = '<p class="search-hint">Escribe al menos 2 caracteres para buscar</p>';
+          return;
+        }
+        resultsEl.innerHTML = '<p class="search-hint">Buscando…</p>';
+        searchTimer = setTimeout(async () => {
+          try {
+            const token = localStorage.getItem('megaSoatToken');
+            const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
+              headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (!res.ok) { resultsEl.innerHTML = '<p class="search-hint">Error al buscar</p>'; return; }
+            const data = await res.json();
+            renderResults(resultsEl, data, q);
+          } catch(e) {
+            resultsEl.innerHTML = '<p class="search-hint">Error de conexión</p>';
+          }
+        }, 320);
+      });
+
+      function hl(text, q) {
+        if (!text) return '';
+        const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+        return String(text).replace(re, '<mark>$1</mark>');
+      }
+
+      function renderResults(el, data, q) {
+        const total = data.policies.length + data.users.length + data.pos.length;
+        if (total === 0) { el.innerHTML = '<p class="search-hint">Sin resultados para «' + q + '»</p>'; return; }
+        let html = '';
+
+        if (data.policies.length) {
+          html += `<div class="search-group"><div class="search-group-label">Pólizas</div>`;
+          data.policies.forEach(p => {
+            html += `<a class="search-item" href="/portal.html?poliza=${encodeURIComponent(p.policyNumber)}">
+              <span class="search-item-icon">📄</span>
+              <span class="search-item-body">
+                <span class="search-item-title">${hl(p.policyNumber, q)}</span>
+                <span class="search-item-sub">${hl(p.plate, q)} · ${p.insurer} · <span class="status-${(p.status||'').toLowerCase()}">${p.status}</span></span>
+              </span>
+            </a>`;
+          });
+          html += '</div>';
+        }
+
+        if (data.pos.length) {
+          html += `<div class="search-group"><div class="search-group-label">Puntos de venta</div>`;
+          data.pos.forEach(p => {
+            html += `<a class="search-item" href="/admin.html">
+              <span class="search-item-icon">🏪</span>
+              <span class="search-item-body">
+                <span class="search-item-title">${hl(p.name, q)}</span>
+                <span class="search-item-sub">${hl(p.city, q)}</span>
+              </span>
+            </a>`;
+          });
+          html += '</div>';
+        }
+
+        if (data.users.length) {
+          html += `<div class="search-group"><div class="search-group-label">Usuarios</div>`;
+          data.users.forEach(u => {
+            html += `<a class="search-item" href="/admin.html">
+              <span class="search-item-icon">👤</span>
+              <span class="search-item-body">
+                <span class="search-item-title">${hl(u.fullName, q)}</span>
+                <span class="search-item-sub">${hl(u.email, q)} · ${(u.rol||'').replace('ROLE_','')}</span>
+              </span>
+            </a>`;
+          });
+          html += '</div>';
+        }
+
+        el.innerHTML = html;
+      }
+    }
 
     // Marcar enlace activo
     const path = window.location.pathname;
@@ -111,6 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
       { href: '/observatorio.html', label: '🗺️ Observatorio' },
       { href: '/dashboard.html',  label: '📊 Dashboard',     auth: true },
       { href: '/admin.html',      label: '⚙️ Administración', auth: true },
+      { href: '/perfil.html',     label: '👤 Mi Perfil',      auth: true },
     ];
 
     allLinks.forEach(item => {
@@ -121,6 +318,29 @@ document.addEventListener('DOMContentLoaded', () => {
       markActive(a);
       linksContainer.appendChild(a);
     });
+
+    // ── Botón de tema en drawer ──
+    function renderDrawerThemeBtn(btn) {
+      const isDark = (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark';
+      btn.textContent = isDark ? '☀️  Cambiar a Claro' : '🌙  Cambiar a Oscuro';
+    }
+    const drawerThemeBtn = document.createElement('button');
+    drawerThemeBtn.className = 'btn-secondary mobile-drawer-logout theme-toggle-drawer';
+    drawerThemeBtn.style.cssText = 'margin-top:6px;border-color:var(--chip-border);background:var(--chip-bg);color:var(--text)';
+    renderDrawerThemeBtn(drawerThemeBtn);
+    drawerThemeBtn.addEventListener('click', () => {
+      const next = (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('megaSoatTheme', next);
+      renderDrawerThemeBtn(drawerThemeBtn);
+      document.querySelectorAll('.theme-toggle').forEach(b => {
+        const isDark = next === 'dark';
+        b.innerHTML = isDark
+          ? '<span class="theme-icon">☀️</span><span class="theme-label">Claro</span>'
+          : '<span class="theme-icon">🌙</span><span class="theme-label">Oscuro</span>';
+      });
+    });
+    linksContainer.appendChild(drawerThemeBtn);
 
     // Acción de sesión justo debajo de los links
     if (token) {

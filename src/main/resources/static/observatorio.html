@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('megaSoatTheme')||'dark')</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Observatorio de Riesgos — MegaSOAT</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,37 +14,40 @@
 
         /* Popup glassmorphism */
         .leaflet-popup-content-wrapper {
-            background: rgba(12, 18, 40, 0.92);
+            background: rgba(12, 18, 40, 0.94);
             backdrop-filter: blur(18px);
             color: #e6eef1;
             border: 1px solid rgba(255,255,255,0.12);
             border-radius: 14px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+            transition: background .28s, color .28s, border-color .28s;
         }
-        .leaflet-popup-tip { background: rgba(12,18,40,0.92); }
+        .leaflet-popup-tip { background: rgba(12,18,40,0.94); transition: background .28s; }
         .leaflet-popup-close-button { color: #8892a4 !important; font-size: 18px !important; top: 10px !important; right: 10px !important; }
-        .leaflet-popup-close-button:hover { color: #fff !important; }
+        .leaflet-popup-close-button:hover { color: var(--text) !important; }
         .leaflet-popup-content { margin: 16px 18px; }
 
         /* Controles del mapa */
         .leaflet-control-zoom a {
             background: rgba(12,18,40,0.9) !important;
-            color: #e6eef1 !important;
+            color: #e2e8f0 !important;
             border-color: rgba(255,255,255,0.1) !important;
             backdrop-filter: blur(8px);
+            transition: background .25s, color .25s !important;
         }
         .leaflet-control-zoom a:hover { background: rgba(6,182,212,0.15) !important; color: #06b6d4 !important; }
         .leaflet-control-attribution { background: rgba(4,8,18,0.75) !important; color: #555 !important; font-size: .7rem; }
 
         /* Leyenda flotante */
         .map-legend {
-            background: rgba(12,18,40,0.88);
+            background: rgba(12,18,40,0.90);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 10px;
             padding: 10px 14px;
             font-family: 'Inter', sans-serif;
             font-size: .78rem;
+            transition: background .28s, border-color .28s;
         }
         .map-legend-title {
             font-weight: 700;
@@ -51,6 +55,7 @@
             margin-bottom: 8px;
             font-size: .8rem;
             letter-spacing: .03em;
+            transition: color .28s;
         }
         .map-legend-row {
             display: flex;
@@ -58,6 +63,7 @@
             gap: 8px;
             margin-bottom: 5px;
             color: #c8d3e0;
+            transition: color .28s;
         }
         .map-legend-dot {
             width: 12px; height: 12px;
@@ -65,17 +71,55 @@
             flex-shrink: 0;
             box-shadow: 0 0 6px currentColor;
         }
+        .map-legend-divider {
+            margin-top: 8px; padding-top: 8px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+
+        /* ── TEMA CLARO — Mapa ── */
+        [data-theme="light"] .leaflet-popup-content-wrapper {
+            background: rgba(255,255,255,0.97);
+            color: #1a202c;
+            border: 1px solid rgba(0,0,0,0.08);
+            box-shadow: 0 8px 40px rgba(0,0,0,0.14);
+        }
+        [data-theme="light"] .leaflet-popup-tip { background: rgba(255,255,255,0.97); }
+        [data-theme="light"] .leaflet-popup-close-button { color: #64748b !important; }
+        [data-theme="light"] .leaflet-control-zoom a {
+            background: rgba(255,255,255,0.97) !important;
+            color: #334155 !important;
+            border-color: rgba(0,0,0,0.1) !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+        }
+        [data-theme="light"] .leaflet-control-zoom a:hover {
+            background: rgba(6,182,212,0.1) !important;
+            color: #0891b2 !important;
+        }
+        [data-theme="light"] .leaflet-control-attribution {
+            background: rgba(255,255,255,0.88) !important;
+            color: #888 !important;
+        }
+        [data-theme="light"] .map-legend {
+            background: rgba(255,255,255,0.96);
+            border: 1px solid rgba(0,0,0,0.08);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+        }
+        [data-theme="light"] .map-legend-title { color: #1a202c; }
+        [data-theme="light"] .map-legend-row { color: #334155; }
+        [data-theme="light"] .map-legend-divider { border-top-color: rgba(0,0,0,0.08); }
+        [data-theme="light"] .map-popup-label { color: #64748b; }
 
         /* Map card header gradient */
         .map-card-header {
             padding: 18px 22px;
             background: linear-gradient(90deg, rgba(6,182,212,0.06) 0%, rgba(99,102,241,0.04) 100%);
-            border-bottom: 1px solid rgba(255,255,255,0.07);
+            border-bottom: 1px solid var(--card-border);
             border-radius: var(--radius) var(--radius) 0 0;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
+            transition: border-color .28s;
         }
         .map-live-dot {
             width: 8px; height: 8px;
@@ -89,7 +133,8 @@
 </head>
 <body data-requires-auth="true">
     <header class="topbar">
-        <div class="brand">Mega<span>SOAT</span></div>
+        <div class="brand"><div class="brand-icon">MS</div>Mega<span>SOAT</span></div>
+        <div class="nav-sep"></div>
         <nav class="nav-links">
             <a href="/">Inicio</a>
             <a href="/portal.html">Verificar SOAT</a>
@@ -165,6 +210,27 @@
         let leafletMap = null;
         let markers = [];
 
+        // Tile URLs por tema
+        const TILE_URLS = {
+            dark:  'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+            light: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+        };
+        let currentTile = null;
+
+        function getMapTheme() {
+            return document.documentElement.getAttribute('data-theme') || 'dark';
+        }
+
+        function updateTileLayer() {
+            if (!leafletMap) return;
+            if (currentTile) leafletMap.removeLayer(currentTile);
+            currentTile = L.tileLayer(TILE_URLS[getMapTheme()], {
+                attribution: '© <a href="https://www.openstreetmap.org/">OpenStreetMap</a> © <a href="https://carto.com/">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(leafletMap);
+        }
+
         function initMap() {
             leafletMap = L.map('map', {
                 center: [-9.5, -75.0],
@@ -173,11 +239,7 @@
                 attributionControl: true
             });
 
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '© OpenStreetMap © CARTO',
-                subdomains: 'abcd',
-                maxZoom: 19
-            }).addTo(leafletMap);
+            updateTileLayer();
 
             // Leyenda flotante
             const legend = L.control({ position: 'bottomleft' });
@@ -197,13 +259,17 @@
                         <div class="map-legend-dot" style="background:#ef4444;color:#ef4444"></div>
                         <span>Alto (&gt; 20%)</span>
                     </div>
-                    <div class="map-legend-row" style="margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08)">
-                        <div class="map-legend-dot" style="background:rgba(255,255,255,0.3);color:#aaa;width:20px;height:20px"></div>
+                    <div class="map-legend-row map-legend-divider">
+                        <div class="map-legend-dot" style="background:rgba(128,128,128,0.4);color:#888;width:20px;height:20px"></div>
                         <span>Tamaño = volumen</span>
                     </div>`;
                 return div;
             };
             legend.addTo(leafletMap);
+
+            // Reemplazar tile layer cuando cambie el tema
+            new MutationObserver(() => updateTileLayer())
+                .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
         }
 
         function riskColor(risk) {

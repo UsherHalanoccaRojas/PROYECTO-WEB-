@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('megaSoatTheme')||'dark')</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ranking — MegaSOAT</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -10,7 +11,8 @@
 </head>
 <body data-requires-auth="true">
     <header class="topbar">
-        <div class="brand">Mega<span>SOAT</span></div>
+        <div class="brand"><div class="brand-icon">MS</div>Mega<span>SOAT</span></div>
+        <div class="nav-sep"></div>
         <nav class="nav-links">
             <a href="/">Inicio</a>
             <a href="/portal.html">Verificar SOAT</a>
@@ -30,7 +32,7 @@
 
     <main class="container">
         <div style="margin-bottom:24px">
-            <h1 style="font-size:1.8rem;color:#f8fbfb">Top Puntos de Venta</h1>
+            <h1 style="font-size:1.8rem;color:var(--text)">Top Puntos de Venta</h1>
             <p style="color:var(--muted);font-size:.95rem">Ranking mensual por volumen de ventas y cumplimiento. Datos en tiempo real.</p>
         </div>
 
@@ -114,7 +116,7 @@
                     podiumEl.innerHTML = displayOrder.map((item, vi) => `
                         <div style="text-align:center;flex:1;max-width:200px">
                             <div style="font-size:2.2rem;margin-bottom:8px">${displayMedals[vi]}</div>
-                            <div style="font-weight:700;color:#fff;font-size:.92rem;margin-bottom:4px">${item.name}</div>
+                            <div style="font-weight:700;color:var(--text);font-size:.92rem;margin-bottom:4px">${item.name}</div>
                             <div style="font-size:.8rem;color:var(--muted);margin-bottom:10px">${item.city}</div>
                             <div style="background:rgba(6,182,212,${vi===1?'0.25':'0.12'});border:1px solid rgba(6,182,212,0.2);border-radius:10px 10px 0 0;height:${displayHeights[vi]};display:flex;align-items:flex-end;justify-content:center;padding-bottom:12px">
                                 <span style="font-size:1.2rem;font-weight:700;color:var(--accent)">${item.sales}</span>

@@ -2,15 +2,124 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('megaSoatTheme')||'dark')</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Administración — MegaSOAT</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/site.css">
+    <style>
+        /* ── Tabla de usuarios mejorada ── */
+        .user-cell { display: flex; align-items: center; gap: 12px; }
+        .user-avatar {
+            width: 38px; height: 38px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: .85rem; font-weight: 700; flex-shrink: 0;
+            letter-spacing: .5px;
+        }
+        .user-info { display: flex; flex-direction: column; gap: 2px; }
+        .user-name { font-weight: 600; color: var(--text); font-size: .9rem; }
+        .user-email { font-size: .78rem; color: var(--muted); }
+        [data-theme="light"] .user-avatar { filter: saturate(1.6) brightness(0.82); }
+        [data-theme="light"] .role-badge.admin    { background:rgba(59,130,246,.12); color:#1d4ed8; border-color:rgba(59,130,246,.28); }
+        [data-theme="light"] .role-badge.comercial { background:rgba(6,182,212,.1); color:#0891b2; border-color:rgba(6,182,212,.25); }
+        [data-theme="light"] .role-badge.superadmin { background:rgba(139,92,246,.12); color:#7c3aed; border-color:rgba(139,92,246,.28); }
+        [data-theme="light"] .status-badge.active { background:rgba(34,197,94,.1); color:#15803d; border-color:rgba(34,197,94,.25); }
+
+        /* Badges de rol con color propio */
+        .role-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 4px 10px; border-radius: 20px;
+            font-size: .72rem; font-weight: 700; letter-spacing: .5px;
+            text-transform: uppercase;
+        }
+        .role-badge::before { content:''; width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+        .role-badge.superadmin { background: rgba(139,92,246,.15); color:#a78bfa; border:1px solid rgba(139,92,246,.25); }
+        .role-badge.superadmin::before { background:#a78bfa; }
+        .role-badge.admin { background: rgba(59,130,246,.15); color:#60a5fa; border:1px solid rgba(59,130,246,.25); }
+        .role-badge.admin::before { background:#60a5fa; }
+        .role-badge.comercial { background: rgba(0,200,220,.12); color:#22d3ee; border:1px solid rgba(0,200,220,.22); }
+        .role-badge.comercial::before { background:#22d3ee; }
+        .role-badge.cliente { background: rgba(156,163,175,.12); color:#9ca3af; border:1px solid rgba(156,163,175,.2); }
+        .role-badge.cliente::before { background:#9ca3af; }
+
+        /* Badges de estado */
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 4px 10px; border-radius: 20px;
+            font-size: .72rem; font-weight: 600;
+        }
+        .status-badge::before { content:''; width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+        .status-badge.active { background:rgba(34,197,94,.1); color:#4ade80; border:1px solid rgba(34,197,94,.2); }
+        .status-badge.active::before { background:#4ade80; box-shadow:0 0 6px #4ade8088; }
+        .status-badge.inactive { background:rgba(248,113,113,.1); color:#f87171; border:1px solid rgba(248,113,113,.2); }
+        .status-badge.inactive::before { background:#f87171; }
+
+        /* Botones de acción */
+        .action-group { display: flex; align-items: center; gap: 6px; }
+        .act-btn {
+            background: var(--chip-bg);
+            border: 1px solid var(--chip-border);
+            color: var(--muted);
+            padding: 6px 10px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: .8rem;
+            font-weight: 500;
+            font-family: inherit;
+            display: inline-flex; align-items: center; gap: 5px;
+            transition: all .15s;
+            white-space: nowrap;
+        }
+        .act-btn:hover { background:var(--surface-hover); color:var(--text); border-color:var(--input-border); }
+        .act-btn.accent:hover { background:rgba(0,200,220,.12); color:#22d3ee; border-color:rgba(0,200,220,.3); }
+        .act-btn.danger:hover { background:rgba(248,113,113,.1); color:#f87171; border-color:rgba(248,113,113,.25); }
+
+        /* Dropdown de rol */
+        .role-wrap { position: relative; display: inline-block; }
+        .role-btn {
+            background: var(--chip-bg);
+            border: 1px solid var(--chip-border);
+            color: var(--muted);
+            padding: 6px 10px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: .8rem; font-weight: 500; font-family: inherit;
+            display: inline-flex; align-items: center; gap: 6px;
+            transition: all .15s; white-space: nowrap;
+        }
+        .role-btn:hover { background:var(--input-bg); color:var(--text); border-color:var(--input-border); }
+        .role-btn .chevron { font-size: .6rem; opacity:.45; transition: transform .15s; }
+        .role-btn.open { background:var(--input-bg); color:var(--text); border-color:var(--input-border); }
+        .role-btn.open .chevron { transform:rotate(180deg); opacity:.8; }
+        .role-menu {
+            display: none; position: absolute; right: 0; top: calc(100% + 6px);
+            min-width: 160px;
+            background: var(--modal-bg);
+            border: 1px solid var(--modal-border);
+            border-radius: 10px; padding: 5px;
+            z-index: 300; box-shadow: 0 12px 32px rgba(0,0,0,.55);
+        }
+        .role-menu.open { display: block; }
+        .role-menu-header {
+            font-size: .68rem; font-weight: 600; color: var(--muted);
+            text-transform: uppercase; letter-spacing: .6px;
+            padding: 6px 10px 4px;
+        }
+        .role-item {
+            padding: 8px 12px; border-radius: 6px; cursor: pointer;
+            font-size: .83rem; font-weight: 500; color: var(--text-dim);
+            display: flex; align-items: center; gap: 8px;
+            transition: background .12s, color .12s;
+        }
+        .role-item .ri { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+        .role-item:hover { background:var(--surface-hover); color:var(--text); }
+    </style>
 </head>
 <body data-requires-auth="true">
     <header class="topbar">
-        <div class="brand">Mega<span>SOAT</span></div>
+        <div class="brand"><div class="brand-icon">MS</div>Mega<span>SOAT</span></div>
+        <div class="nav-sep"></div>
         <nav class="nav-links">
             <a href="/">Inicio</a>
             <a href="/portal.html">Verificar SOAT</a>
@@ -30,7 +139,7 @@
 
     <main class="container">
         <div style="margin-bottom:24px">
-            <h1 style="font-size:1.7rem;color:#f8fbfb">Administración</h1>
+            <h1 style="font-size:1.7rem;color:var(--text)">Administración</h1>
             <p style="color:var(--muted);font-size:.9rem">Gestión de usuarios, puntos de venta y vouchers</p>
         </div>
 
@@ -50,7 +159,7 @@
             </div>
             <div class="table-wrap">
                 <table class="table">
-                    <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+                    <thead><tr><th>Usuario</th><th>Rol</th><th>Estado</th><th style="text-align:right">Acciones</th></tr></thead>
                     <tbody id="usersBody"><tr><td colspan="5" class="alert-empty">Cargando...</td></tr></tbody>
                 </table>
             </div>
@@ -78,7 +187,7 @@
             </div>
             <div class="table-wrap">
                 <table class="table">
-                    <thead><tr><th>N° Operación</th><th>Banco</th><th>Monto</th><th>Fecha</th><th>Registrado por</th><th>Estado</th><th>Acciones</th></tr></thead>
+                    <thead><tr><th>N° Operación</th><th>Banco</th><th>Monto</th><th>Fecha</th><th>Tipo</th><th>Estado</th><th>Acciones</th></tr></thead>
                     <tbody id="vouchersBody"><tr><td colspan="7" class="alert-empty">Cargando...</td></tr></tbody>
                 </table>
             </div>
@@ -182,7 +291,7 @@
             </div>
             <div class="form-row cols-2">
                 <div class="form-group"><label>Fecha operación</label><input id="vDate" type="date"></div>
-                <div class="form-group"><label>Registrado por</label><input id="vRegisteredBy" type="text"></div>
+                <div class="form-group"><label>Observaciones</label><input id="vObs" type="text" placeholder="Opcional"></div>
             </div>
             <div class="form-actions">
                 <button class="primary-button" onclick="createVoucher()">Registrar</button>
@@ -235,30 +344,105 @@
             m.addEventListener('click', e => { if(e.target === m) m.classList.remove('open'); });
         });
 
+        // ── ROLE DROPDOWN ──
+        function toggleRoleMenu(btn) {
+            const menu = btn.nextElementSibling;
+            const isOpen = menu.classList.contains('open');
+            closeAllMenus();
+            if (!isOpen) { menu.classList.add('open'); btn.classList.add('open'); }
+        }
+        function closeAllMenus() {
+            document.querySelectorAll('.role-menu.open').forEach(m => m.classList.remove('open'));
+            document.querySelectorAll('.act-btn.open').forEach(b => b.classList.remove('open'));
+        }
+        document.addEventListener('click', e => {
+            if (!e.target.closest('.role-wrap')) closeAllMenus();
+        });
+        async function pickRole(email, role) {
+            closeAllMenus();
+            await assignRole(email, role);
+        }
+
+        // ── RESET CONTRASEÑA ──
+        function resetPassword(email, nombre) {
+            const pwd = prompt(`Nueva contraseña temporal para ${nombre}:`);
+            if (!pwd || pwd.length < 6) { showToast('Contraseña muy corta (mín. 6 caracteres)','error'); return; }
+            fetch('/api/users/reset-password', {
+                method: 'POST', headers: H(),
+                body: JSON.stringify({ email, newPassword: pwd })
+            }).then(r => {
+                if (r.ok) showToast(`Contraseña restablecida para ${nombre}`);
+                else showToast('Error al restablecer contraseña','error');
+            }).catch(() => showToast('Error de red','error'));
+        }
+
+        // ── ACTIVAR / DESACTIVAR ──
+        async function toggleActive(email, currentlyActive) {
+            const action = currentlyActive ? 'desactivar' : 'activar';
+            if (!confirm(`¿${action.charAt(0).toUpperCase()+action.slice(1)} usuario ${email}?`)) return;
+            try {
+                const res = await fetch('/api/users/toggle-active', {
+                    method: 'POST', headers: H(),
+                    body: JSON.stringify({ email, active: !currentlyActive })
+                });
+                if (res.ok) { loadUsers(); showToast(`Usuario ${action}do`); }
+                else showToast(`Error al ${action} usuario`,'error');
+            } catch(e) { showToast('Error de red','error'); }
+        }
+
         // ── USERS ──
         async function loadUsers() {
             try {
                 const res = await fetch('/api/users', { headers: H() });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
                 const data = await res.json();
                 const tbody = document.getElementById('usersBody');
                 if (!data.length) { tbody.innerHTML = '<tr><td colspan="5" class="alert-empty">Sin usuarios</td></tr>'; return; }
-                tbody.innerHTML = data.map(u => `
-                    <tr>
-                        <td><strong>${u.fullName || u.username}</strong></td>
-                        <td>${u.email}</td>
-                        <td><span class="badge info">${(u.role?.authority||'—').replace('ROLE_','')}</span></td>
-                        <td><span class="badge ${u.active!==false?'low':'high'}">${u.active!==false?'Activo':'Inactivo'}</span></td>
+                tbody.innerHTML = data.map(u => {
+                    const name = u.nombre || '—';
+                    const initials = name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+                    const rolRaw = (u.rol||'').replace('ROLE_','').toLowerCase();
+                    const avatarColors = {superadmin:'#a78bfa',admin:'#60a5fa',comercial:'#22d3ee',cliente:'#9ca3af'};
+                    const avatarBg = (avatarColors[rolRaw]||'#607888') + '22';
+                    const avatarColor = avatarColors[rolRaw] || '#607888';
+                    const rolLabel = rolRaw.toUpperCase() || '—';
+                    const isActive = u.estado === 'Activo';
+                    return `<tr>
                         <td>
-                            <select class="btn-sm" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:#e6eef1;border-radius:6px;padding:4px 8px" onchange="assignRole('${u.email}',this.value)">
-                                <option value="">Cambiar rol</option>
-                                <option value="COMERCIAL">COMERCIAL</option>
-                                <option value="ADMIN">ADMIN</option>
-                                <option value="SUPERADMIN">SUPERADMIN</option>
-                            </select>
+                            <div class="user-cell">
+                                ${u.avatarUrl
+                                    ? `<img class="user-avatar" src="${u.avatarUrl}" alt="${initials}" style="object-fit:cover;">`
+                                    : `<div class="user-avatar" style="background:${avatarBg};color:${avatarColor}">${initials}</div>`
+                                }
+                                <div class="user-info">
+                                    <span class="user-name">${name}</span>
+                                    <span class="user-email">${u.email}</span>
+                                </div>
+                            </div>
                         </td>
-                    </tr>`).join('');
+                        <td><span class="role-badge ${rolRaw}">${rolLabel}</span></td>
+                        <td><span class="status-badge ${isActive?'active':'inactive'}">${isActive?'Activo':'Inactivo'}</span></td>
+                        <td style="text-align:right">
+                            <div class="action-group" style="justify-content:flex-end">
+                                <div class="role-wrap">
+                                    <button class="act-btn accent" onclick="toggleRoleMenu(this)">
+                                        ✦ Rol <span class="chevron">▼</span>
+                                    </button>
+                                    <div class="role-menu">
+                                        <div class="role-menu-header">Asignar rol</div>
+                                        <div class="role-item" onclick="pickRole('${u.email}','COMERCIAL')"><span class="ri" style="background:#22d3ee"></span>Comercial</div>
+                                        <div class="role-item" onclick="pickRole('${u.email}','ADMIN')"><span class="ri" style="background:#60a5fa"></span>Admin</div>
+                                        <div class="role-item" onclick="pickRole('${u.email}','SUPERADMIN')"><span class="ri" style="background:#a78bfa"></span>Superadmin</div>
+                                    </div>
+                                </div>
+                                <button class="act-btn" onclick="resetPassword('${u.email}','${name}')">🔑 Reset</button>
+                                <button class="act-btn danger" onclick="toggleActive('${u.email}',${isActive})">${isActive?'⊘ Desactivar':'✓ Activar'}</button>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('');
             } catch(e) {
-                document.getElementById('usersBody').innerHTML = '<tr><td colspan="5" class="alert-empty">Error al cargar</td></tr>';
+                document.getElementById('usersBody').innerHTML = `<tr><td colspan="5" class="alert-empty">Error al cargar (${e.message})</td></tr>`;
             }
         }
 
@@ -340,26 +524,28 @@
         async function loadVouchers() {
             try {
                 const res = await fetch('/api/vouchers', { headers: H() });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
                 const data = await res.json();
                 const tbody = document.getElementById('vouchersBody');
-                if (!data.length) { tbody.innerHTML = '<tr><td colspan="7" class="alert-empty">Sin vouchers</td></tr>'; return; }
+                if (!Array.isArray(data) || !data.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="alert-empty">Sin vouchers registrados</td></tr>'; return;
+                }
                 tbody.innerHTML = data.map(v => `
                     <tr>
-                        <td><code style="color:var(--accent)">${v.operationNumber}</code></td>
+                        <td><code style="color:var(--accent);font-family:monospace">${v.operationNumber}</code></td>
                         <td>${v.bank}</td>
-                        <td>S/ ${Number(v.amount).toFixed(2)}</td>
+                        <td><strong>S/ ${Number(v.amount).toFixed(2)}</strong></td>
                         <td>${v.operationDate||'—'}</td>
-                        <td>${v.registeredBy||'—'}</td>
+                        <td>${v.type||'—'}</td>
                         <td>
-                            ${v.fraudSuspected?'<span class="badge high">Fraude</span>':''}
-                            ${v.reconciled?'<span class="badge low">Conciliado</span>':'<span class="badge medium">Pendiente</span>'}
+                            ${v.validated?'<span class="badge low">Validado</span>':'<span class="badge medium">Pendiente</span>'}
                         </td>
                         <td>
-                            ${!v.reconciled?`<button class="btn-secondary btn-sm" onclick="reconcile(${v.id})">Conciliar</button>`:''}
+                            ${!v.validated?`<button class="btn-secondary btn-sm" onclick="reconcile(${v.id})">Validar</button>`:''}
                         </td>
                     </tr>`).join('');
             } catch(e) {
-                document.getElementById('vouchersBody').innerHTML = '<tr><td colspan="7" class="alert-empty">Error al cargar</td></tr>';
+                document.getElementById('vouchersBody').innerHTML = `<tr><td colspan="7" class="alert-empty">Error al cargar (${e.message})</td></tr>`;
             }
         }
 
@@ -369,18 +555,20 @@
                 bank: document.getElementById('vBank').value,
                 amount: parseFloat(document.getElementById('vAmount').value),
                 type: document.getElementById('vType').value,
-                operationDate: document.getElementById('vDate').value || null,
-                registeredBy: document.getElementById('vRegisteredBy').value
+                operationDate: document.getElementById('vDate').value || null
             };
             if (!body.operationNumber || !body.bank || !body.amount) { showToast('Completa los campos requeridos','error'); return; }
             try {
                 const res = await fetch('/api/vouchers', { method:'POST', headers: H(), body: JSON.stringify(body) });
                 if (res.ok) {
-                    const v = await res.json();
                     closeModal('modalNewVoucher');
                     loadVouchers();
-                    showToast(v.fraudSuspected ? '⚠️ Voucher registrado — posible fraude detectado' : 'Voucher registrado', v.fraudSuspected?'error':'success');
-                } else showToast('Error al registrar voucher','error');
+                    showToast('Voucher registrado');
+                } else {
+                    const err = await res.text();
+                    showToast('Error al registrar voucher','error');
+                    console.error(err);
+                }
             } catch(e) { showToast('Error de red','error'); }
         }
 

@@ -30,6 +30,9 @@ public class UserAccount {
     @Column(name = "rol")
     private String rol;
 
+    @Column(name = "avatar_url", columnDefinition = "TEXT")
+    private String avatarUrl;
+
     public UserAccount() {}
 
     // Constructor usado en AuthController y DataInitializer
@@ -60,4 +63,7 @@ public class UserAccount {
     public void setActive(boolean active) { this.active = active; }
     public String getRol() { return rol; }
     public void setRol(String rol) { this.rol = rol; }
+
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
 }

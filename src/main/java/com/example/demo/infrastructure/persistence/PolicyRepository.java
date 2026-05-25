@@ -10,4 +10,5 @@ public interface PolicyRepository extends JpaRepository<Policy, Long> {
     Optional<Policy> findByPolicyNumber(String policyNumber);
     List<Policy> findByVehiclePlate(String vehiclePlate);
     List<Policy> findByStatusNot(String status);
+    List<Policy> findTop5ByPolicyNumberContainingIgnoreCaseOrVehiclePlateContainingIgnoreCase(String policyNumber, String plate);
 }
