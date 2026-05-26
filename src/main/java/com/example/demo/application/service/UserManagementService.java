@@ -3,7 +3,6 @@
     import com.example.demo.application.exception.DuplicateResourceException;
     import com.example.demo.application.exception.ResourceNotFoundException;
     import com.example.demo.application.port.in.UserManagementPort;
-    import com.example.demo.domain.model.Role;
     import com.example.demo.domain.model.RoleName;
     import com.example.demo.domain.model.UserAccount;
     import com.example.demo.infrastructure.persistence.UserRepository;
@@ -13,8 +12,6 @@
 
     import java.util.List;
     import java.util.Optional;
-    import java.util.Set;
-    import java.util.stream.Collectors;
 
     @Service
     @Transactional
@@ -60,7 +57,12 @@ public UserAccount register(UserAccount user, List<RoleName> roles) {
 public UserAccount assignRole(String email, RoleName role) {
     UserAccount user = userRepository.findByEmail(email)
             .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado: " + email));
-    user.setRol(role.name()); // guardar como texto
+    user.setRol(role.name());
+    return userRepository.save(user);
+}
+
+@Override
+public UserAccount updateUser(UserAccount user) {
     return userRepository.save(user);
 }
     }

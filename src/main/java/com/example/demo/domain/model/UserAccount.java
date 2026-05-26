@@ -33,6 +33,9 @@ public class UserAccount {
     @Column(name = "avatar_url", columnDefinition = "TEXT")
     private String avatarUrl;
 
+    @Column(name = "session_token", columnDefinition = "TEXT")
+    private String sessionToken;
+
     public UserAccount() {}
 
     // Constructor usado en AuthController y DataInitializer
@@ -66,4 +69,7 @@ public class UserAccount {
 
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
+
+    public String getSessionToken() { return sessionToken; }
+    public void setSessionToken(String sessionToken) { this.sessionToken = sessionToken; }
 }

@@ -1,5 +1,6 @@
 package com.example.demo.infrastructure.security;
 
+import com.example.demo.infrastructure.persistence.UserRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -19,18 +20,21 @@ public class WebSecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtAuthenticationEntryPoint authenticationEntryPoint;
+    private final UserRepository userRepository;
 
     public WebSecurityConfig(CustomUserDetailsService userDetailsService,
                              JwtTokenProvider jwtTokenProvider,
-                             JwtAuthenticationEntryPoint authenticationEntryPoint) {
+                             JwtAuthenticationEntryPoint authenticationEntryPoint,
+                             UserRepository userRepository) {
         this.userDetailsService = userDetailsService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.authenticationEntryPoint = authenticationEntryPoint;
+        this.userRepository = userRepository;
     }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, PasswordEncoder passwordEncoder) throws Exception {
-        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService);
+        JwtAuthenticationFilter jwtAuthenticationFilter = new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService, userRepository);
 
         http
                 .csrf(csrf -> csrf.disable())

@@ -15,4 +15,6 @@ public interface UserManagementPort {
     List<UserAccount> findAllUsers();
 
     UserAccount assignRole(String email, RoleName role);
+
+    UserAccount updateUser(UserAccount user);
 }

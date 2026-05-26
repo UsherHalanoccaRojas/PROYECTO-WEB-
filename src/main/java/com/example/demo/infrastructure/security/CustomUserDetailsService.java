@@ -27,8 +27,9 @@ public UserDetails loadUserByUsername(String username) throws UsernameNotFoundEx
             .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + username));
 
     // Un solo rol como autoridad
-    Set<SimpleGrantedAuthority> authorities =
-            Set.of(new SimpleGrantedAuthority(account.getRol()));
+    String rol = account.getRol() == null ? "USER" : account.getRol().toUpperCase();
+    if (!rol.startsWith("ROLE_")) rol = "ROLE_" + rol;
+    Set<SimpleGrantedAuthority> authorities = Set.of(new SimpleGrantedAuthority(rol));
 
     return new User(
             account.getEmail(),

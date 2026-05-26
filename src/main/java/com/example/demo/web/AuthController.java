@@ -15,10 +15,12 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -43,8 +45,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
-        // validate captcha first
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         if (request.getCaptchaId() == null || request.getCaptchaAnswer() == null ||
                 !captchaService.validate(request.getCaptchaId(), request.getCaptchaAnswer())) {
             logger.info("Login attempt failed for {}: captcha invalid or expired", request.getEmail());
@@ -55,16 +56,71 @@ public class AuthController {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
+            // Verificar sesión activa en otro dispositivo
+            UserAccount account = userManagementPort.findByEmail(userDetails.getUsername()).orElse(null);
+            if (account != null && account.getSessionToken() != null && !account.getSessionToken().isBlank()) {
+                logger.info("Session conflict for {}: already logged in", userDetails.getUsername());
+                return ResponseEntity.status(409).body(Map.of("conflict", true, "email", userDetails.getUsername()));
+            }
+
             Set<String> roles = userDetails.getAuthorities().stream()
                     .map(GrantedAuthority::getAuthority)
                     .collect(Collectors.toSet());
             String token = jwtTokenProvider.generateToken(userDetails.getUsername(), roles);
+
+            // Guardar token activo
+            if (account != null) {
+                account.setSessionToken(token);
+                userManagementPort.updateUser(account);
+            }
+
             logger.info("Login successful for {} roles={}", userDetails.getUsername(), roles);
             return ResponseEntity.ok(new AuthResponse(token, userDetails.getUsername(), roles));
         } catch (BadCredentialsException ex) {
             logger.info("Login failed for {}: bad credentials", request.getEmail());
             return ResponseEntity.status(401).build();
         }
+    }
+
+    @PostMapping("/force-login")
+    public ResponseEntity<?> forceLogin(@RequestBody Map<String, String> request) {
+        String email    = request.get("email");
+        String password = request.get("password");
+        if (email == null || password == null) return ResponseEntity.badRequest().build();
+
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(email, password));
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
+            Set<String> roles = userDetails.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toSet());
+            String token = jwtTokenProvider.generateToken(userDetails.getUsername(), roles);
+
+            userManagementPort.findByEmail(userDetails.getUsername()).ifPresent(acc -> {
+                acc.setSessionToken(token);
+                userManagementPort.updateUser(acc);
+            });
+
+            logger.info("Force-login: session replaced for {}", userDetails.getUsername());
+            return ResponseEntity.ok(new AuthResponse(token, userDetails.getUsername(), roles));
+        } catch (BadCredentialsException ex) {
+            return ResponseEntity.status(401).build();
+        }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails != null) {
+            userManagementPort.findByEmail(userDetails.getUsername()).ifPresent(acc -> {
+                acc.setSessionToken(null);
+                userManagementPort.updateUser(acc);
+            });
+            logger.info("Logout: session cleared for {}", userDetails.getUsername());
+        }
+        return ResponseEntity.ok().build();
     }
 
 @PostMapping("/register")

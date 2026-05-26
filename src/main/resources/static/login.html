@@ -205,6 +205,75 @@
         .login-message.error   { color: var(--danger); }
         .login-message.success { color: var(--accent); }
 
+        /* Modal sesión activa */
+        .session-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.65);
+            backdrop-filter: blur(6px);
+            z-index: 999;
+            align-items: center;
+            justify-content: center;
+        }
+        .session-overlay.visible { display: flex; }
+        .session-modal {
+            background: var(--bg-card);
+            border: 1px solid var(--card-border);
+            border-radius: 18px;
+            padding: 36px 32px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+        }
+        .session-modal .modal-icon {
+            font-size: 2.4rem;
+            margin-bottom: 12px;
+        }
+        .session-modal h3 {
+            margin: 0 0 8px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+        .session-modal p {
+            color: var(--muted);
+            font-size: .88rem;
+            margin: 0 0 24px;
+            line-height: 1.5;
+        }
+        .session-modal .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        .btn-modal-cancel {
+            flex: 1;
+            padding: 11px;
+            border-radius: 10px;
+            border: 1px solid var(--card-border);
+            background: transparent;
+            color: var(--muted);
+            font-size: .9rem;
+            cursor: pointer;
+            transition: all .2s;
+        }
+        .btn-modal-cancel:hover { background: var(--input-bg); color: var(--text); }
+        .btn-modal-confirm {
+            flex: 1;
+            padding: 11px;
+            border-radius: 10px;
+            border: none;
+            background: var(--accent);
+            color: #000;
+            font-size: .9rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity .2s;
+        }
+        .btn-modal-confirm:hover { opacity: .85; }
+
         /* Divider + link */
         .login-footer {
             text-align: center;
@@ -226,6 +295,20 @@
             <a href="/" class="back-link">← Volver al inicio</a>
         </div>
     </header>
+
+    <!-- Modal: cuenta ya en uso -->
+    <div class="session-overlay" id="sessionOverlay">
+        <div class="session-modal">
+            <div class="modal-icon">📱</div>
+            <h3>Cuenta en uso</h3>
+            <p>Esta cuenta ya tiene una sesión activa en otro dispositivo.<br>
+               ¿Deseas continuar aquí y cerrar la otra sesión?</p>
+            <div class="modal-actions">
+                <button class="btn-modal-cancel" id="modalCancel">Cancelar</button>
+                <button class="btn-modal-confirm" id="modalConfirm">Continuar aquí</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Contenido centrado -->
     <div class="login-center">
@@ -271,11 +354,14 @@
 
     <script src="/js/animations.js" defer></script>
     <script>
-        const button = document.getElementById('loginButton');
+        const button    = document.getElementById('loginButton');
         const captchaCode = document.getElementById('captchaCode');
-        const refreshBtn = document.getElementById('refreshCaptcha');
-        const messageEl = document.getElementById('message');
+        const refreshBtn  = document.getElementById('refreshCaptcha');
+        const messageEl   = document.getElementById('message');
+        const overlay     = document.getElementById('sessionOverlay');
         let captchaId = null;
+        let pendingEmail = null;
+        let pendingPassword = null;
 
         async function loadCaptcha() {
             try {
@@ -285,22 +371,27 @@
                 captchaId = j.id;
                 captchaCode.textContent = j.question;
                 document.getElementById('captchaAnswer').value = '';
-            } catch(e) {
-                captchaId = null;
-            }
+            } catch(e) { captchaId = null; }
         }
 
         loadCaptcha();
         refreshBtn.addEventListener('click', e => { e.preventDefault(); loadCaptcha(); });
 
+        function saveSessionAndRedirect(body) {
+            localStorage.setItem('megaSoatToken', body.token);
+            localStorage.setItem('megaSoatUser', body.email);
+            showMsg('✓ Acceso concedido', 'success');
+            setTimeout(() => { window.location.href = '/dashboard.html'; }, 500);
+        }
+
         button.addEventListener('click', async () => {
             messageEl.textContent = '';
             messageEl.className = 'login-message';
-            const email = document.getElementById('email').value.trim();
+            const email    = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value.trim();
             const captchaAnswer = document.getElementById('captchaAnswer').value.trim();
             if (!email || !password) { showMsg('Completa todos los campos', 'error'); return; }
-            if (!captchaAnswer) { showMsg('Ingresa el código de verificación', 'error'); return; }
+            if (!captchaAnswer)      { showMsg('Ingresa el código de verificación', 'error'); return; }
 
             button.textContent = 'Verificando...';
             button.disabled = true;
@@ -311,18 +402,60 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password, captchaId, captchaAnswer })
                 });
+
+                if (res.status === 409) {
+                    // Cuenta activa en otro dispositivo → mostrar modal
+                    pendingEmail    = email;
+                    pendingPassword = password;
+                    overlay.classList.add('visible');
+                    button.textContent = 'Iniciar sesión';
+                    button.disabled = false;
+                    return;
+                }
                 if (!res.ok) {
                     if (res.status === 400) throw new Error('Captcha expirado — toca ↻ Nuevo');
                     if (res.status === 401) throw new Error('Correo o contraseña incorrectos');
                     throw new Error('Error de autenticación');
                 }
-                const body = await res.json();
-                localStorage.setItem('megaSoatToken', body.token);
-                localStorage.setItem('megaSoatUser', body.email);
-                showMsg('✓ Acceso concedido', 'success');
-                setTimeout(() => { window.location.href = '/dashboard.html'; }, 500);
+                saveSessionAndRedirect(await res.json());
             } catch(err) {
                 showMsg(err.message || 'Error de autenticación', 'error');
+                button.textContent = 'Iniciar sesión';
+                button.disabled = false;
+                loadCaptcha();
+            }
+        });
+
+        // Modal: cancelar
+        document.getElementById('modalCancel').addEventListener('click', () => {
+            overlay.classList.remove('visible');
+            pendingEmail = pendingPassword = null;
+            loadCaptcha();
+        });
+
+        // Modal: continuar aquí (force-login, sin captcha)
+        document.getElementById('modalConfirm').addEventListener('click', async () => {
+            overlay.classList.remove('visible');
+            button.textContent = 'Ingresando...';
+            button.disabled = true;
+
+            try {
+                const res = await fetch('/api/auth/force-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: pendingEmail, password: pendingPassword })
+                });
+
+                if (!res.ok) {
+                    showMsg('Error al reconectar. Intenta de nuevo.', 'error');
+                    button.textContent = 'Iniciar sesión';
+                    button.disabled = false;
+                    loadCaptcha();
+                    return;
+                }
+                saveSessionAndRedirect(await res.json());
+            } catch(e) {
+                showMsg('Error de red. Intenta de nuevo.', 'error');
                 button.textContent = 'Iniciar sesión';
                 button.disabled = false;
                 loadCaptcha();
