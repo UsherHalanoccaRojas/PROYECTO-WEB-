@@ -44,6 +44,9 @@
         async function loadCaptcha() {
             try {
                 const response = await fetch('/api/auth/captcha');
+                if (!response.ok) {
+                    throw new Error('No se pudo cargar el captcha');
+                }
                 const data = await response.json();
                 currentCaptchaId = data.id;
                 document.getElementById('captchaText').textContent = data.question;

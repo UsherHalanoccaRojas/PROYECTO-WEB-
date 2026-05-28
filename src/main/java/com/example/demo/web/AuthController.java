@@ -3,6 +3,7 @@ package com.example.demo.web;
 import com.example.demo.application.port.in.UserManagementPort;
 import com.example.demo.domain.model.RoleName;
 import com.example.demo.domain.model.UserAccount;
+import com.example.demo.infrastructure.monitoring.ActivityMonitoringService;
 import com.example.demo.infrastructure.security.JwtTokenProvider;
 import com.example.demo.web.dto.AuthResponse;
 import com.example.demo.web.dto.LoginRequest;
@@ -19,6 +20,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,19 +35,22 @@ public class AuthController {
     private final UserManagementPort userManagementPort;
     private final JwtTokenProvider jwtTokenProvider;
     private final com.example.demo.infrastructure.service.CaptchaService captchaService;
+    private final ActivityMonitoringService activityMonitoringService;
 
     public AuthController(AuthenticationManager authenticationManager,
                           UserManagementPort userManagementPort,
                           JwtTokenProvider jwtTokenProvider,
-                          com.example.demo.infrastructure.service.CaptchaService captchaService) {
+                          com.example.demo.infrastructure.service.CaptchaService captchaService,
+                          ActivityMonitoringService activityMonitoringService) {
         this.authenticationManager = authenticationManager;
         this.userManagementPort = userManagementPort;
         this.jwtTokenProvider = jwtTokenProvider;
         this.captchaService = captchaService;
+        this.activityMonitoringService = activityMonitoringService;
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
         if (request.getCaptchaId() == null || request.getCaptchaAnswer() == null ||
                 !captchaService.validate(request.getCaptchaId(), request.getCaptchaAnswer())) {
             logger.info("Login attempt failed for {}: captcha invalid or expired", request.getEmail());
@@ -76,6 +81,14 @@ public class AuthController {
             }
 
             logger.info("Login successful for {} roles={}", userDetails.getUsername(), roles);
+            activityMonitoringService.recordAuthenticationEvent(
+                    "LOGIN",
+                    userDetails.getUsername(),
+                    roles,
+                    httpRequest,
+                    200,
+                    "Inicio de sesión exitoso"
+            );
             return ResponseEntity.ok(new AuthResponse(token, userDetails.getUsername(), roles));
         } catch (BadCredentialsException ex) {
             logger.info("Login failed for {}: bad credentials", request.getEmail());
@@ -123,20 +136,32 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
-@PostMapping("/register")
-public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
-    UserAccount user = new UserAccount(request.getFullName(), request.getEmail(), request.getPassword());
-    List<RoleName> roles = request.getRoles().stream()
-            .map(role -> RoleName.fromValue(role.replace("ROLE_", "")))
-            .collect(Collectors.toList());
-    UserAccount saved = userManagementPort.register(user, roles);
+    @PostMapping("/register")
+    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request,
+                                                 @AuthenticationPrincipal UserDetails userDetails,
+                                                 HttpServletRequest httpRequest) {
+        UserAccount user = new UserAccount(request.getFullName(), request.getEmail(), request.getPassword());
+        List<RoleName> roles = request.getRoles().stream()
+                .map(role -> RoleName.fromValue(role.replace("ROLE_", "")))
+                .collect(Collectors.toList());
+        UserAccount saved = userManagementPort.register(user, roles);
 
-    // Un solo rol
-    Set<String> authorities = Set.of(saved.getRol());
+        // Un solo rol
+        Set<String> authorities = Set.of(saved.getRol());
 
-    String token = jwtTokenProvider.generateToken(saved.getEmail(), authorities);
-    return ResponseEntity.ok(new AuthResponse(token, saved.getEmail(), authorities));
-}
+        String token = jwtTokenProvider.generateToken(saved.getEmail(), authorities);
+        if (userDetails != null) {
+            activityMonitoringService.recordAction(
+                    "REGISTER",
+                    userDetails.getUsername(),
+                    userDetails.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toSet()),
+                    httpRequest,
+                    200,
+                    "Usuario creado: " + saved.getEmail()
+            );
+        }
+        return ResponseEntity.ok(new AuthResponse(token, saved.getEmail(), authorities));
+    }
 
 
 

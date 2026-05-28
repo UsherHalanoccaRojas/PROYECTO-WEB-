@@ -18,7 +18,7 @@
             <a href="/portal.html">Verificar SOAT</a>
             <a href="/ranking.html">Ranking</a>
             <a href="/observatorio.html">Observatorio</a>
-            <a href="/dashboard.html" class="nav-auth" style="display:none">Dashboard</a>
+            <a href="/dashboard.html" class="nav-auth" style="display:none">Panel de control</a>
             <a href="/admin.html" class="nav-auth" style="display:none">Administración</a>
         </nav>
         <div class="nav-right">
@@ -68,11 +68,15 @@
 
     <script src="/js/animations.js" defer></script>
     <script>
-        const medals = ['🥇','🥈','🥉'];
-        const podiumHeights = ['110px','80px','60px'];
-        const podiumOrder = [1,0,2]; // 2nd, 1st, 3rd — visual podium order
+        const rankColors = ['#f5b942', '#b9c2cf', '#cd7f32'];
 
         function delinquencyClass(d) { return d >= 10 ? 'high' : d >= 5 ? 'medium' : 'low'; }
+
+        function rankBadge(rank) {
+            const color = rankColors[rank - 1] || 'var(--muted)';
+            const bg = rank <= 3 ? `rgba(255,255,255,0.04)` : 'transparent';
+            return `<span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.9rem;height:1.9rem;padding:0 .45rem;border-radius:999px;border:1px solid ${rank <= 3 ? color : 'rgba(255,255,255,0.12)'};background:${bg};color:${color};font-weight:800;font-size:.92rem;line-height:1">${rank}</span>`;
+        }
 
         function performanceScore(item) {
             // Score: more sales = better, lower delinquency = better
@@ -111,11 +115,10 @@
                 const top3 = data.slice(0, 3);
                 if (top3.length >= 3) {
                     const displayOrder = [top3[1], top3[0], top3[2]]; // 2nd, 1st, 3rd
-                    const displayMedals = ['🥈','🥇','🥉'];
                     const displayHeights = ['90px','120px','70px'];
                     podiumEl.innerHTML = displayOrder.map((item, vi) => `
                         <div style="text-align:center;flex:1;max-width:200px">
-                            <div style="font-size:2.2rem;margin-bottom:8px">${displayMedals[vi]}</div>
+                            <div style="display:flex;justify-content:center;margin-bottom:8px">${rankBadge([2,1,3][vi])}</div>
                             <div style="font-weight:700;color:var(--text);font-size:.92rem;margin-bottom:4px">${item.name}</div>
                             <div style="font-size:.8rem;color:var(--muted);margin-bottom:10px">${item.city}</div>
                             <div style="background:rgba(6,182,212,${vi===1?'0.25':'0.12'});border:1px solid rgba(6,182,212,0.2);border-radius:10px 10px 0 0;height:${displayHeights[vi]};display:flex;align-items:flex-end;justify-content:center;padding-bottom:12px">
@@ -130,9 +133,10 @@
                 const tbody = document.querySelector('#rankingTable tbody');
                 tbody.innerHTML = data.map((item, i) => {
                     const score = performanceScore(item);
+                    const rank = item.position || (i + 1);
                     return `<tr>
                         <td style="text-align:center">
-                            ${i < 3 ? `<span style="font-size:1.3rem">${medals[i]}</span>` : `<strong style="color:var(--muted)">#${item.position}</strong>`}
+                            ${i < 3 ? rankBadge(rank) : `<strong style="color:var(--muted)">#${rank}</strong>`}
                         </td>
                         <td><strong>${item.name}</strong></td>
                         <td>${item.city}</td>

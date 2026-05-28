@@ -4,11 +4,17 @@
     <meta charset="UTF-8">
     <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('megaSoatTheme')||'dark')</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard — MegaSOAT</title>
+    <title>Panel de control — MegaSOAT</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/css/site.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        .rank-num { display:inline-block; width:28px; text-align:center; font-weight:800; font-size:1.05rem; color:var(--muted); }
+        .rank-1 { color:#f5b942; }
+        .rank-2 { color:#b9c2cf; }
+        .rank-3 { color:#cd7f32; }
+    </style>
 </head>
 <body data-requires-auth="true">
     <header class="topbar">
@@ -19,7 +25,7 @@
             <a href="/portal.html">Verificar SOAT</a>
             <a href="/ranking.html">Ranking</a>
             <a href="/observatorio.html">Observatorio</a>
-            <a href="/dashboard.html" class="nav-auth" style="display:none">Dashboard</a>
+            <a href="/dashboard.html" class="nav-auth" style="display:none">Panel de control</a>
             <a href="/admin.html" class="nav-auth" style="display:none">Administración</a>
         </nav>
         <div class="nav-right">
@@ -189,10 +195,9 @@
                 const data = await res.json();
                 const top = data.slice(0, 5);
                 const maxSales = Math.max(...top.map(t => t.sales), 1);
-                const medals = ['🥇','🥈','🥉'];
                 el.innerHTML = top.map((item, i) => `
                     <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
-                        <span style="font-size:1.3rem;width:28px;text-align:center">${medals[i] || (i+1)}</span>
+                        <span class="rank-num ${i<3 ? 'rank-' + (i+1) : ''}">${i+1}</span>
                         <div style="flex:1;min-width:0">
                             <div style="font-weight:600;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.name}</div>
                             <div style="font-size:.78rem;color:var(--muted)">${item.city} · ${item.sales} pólizas</div>

@@ -20,16 +20,22 @@ public class WebSecurityConfig {
     private final CustomUserDetailsService userDetailsService;
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtAuthenticationEntryPoint authenticationEntryPoint;
+    private final JwtAccessDeniedHandler accessDeniedHandler;
     private final UserRepository userRepository;
+    private final com.example.demo.infrastructure.monitoring.RequestActivityFilter requestActivityFilter;
 
     public WebSecurityConfig(CustomUserDetailsService userDetailsService,
                              JwtTokenProvider jwtTokenProvider,
                              JwtAuthenticationEntryPoint authenticationEntryPoint,
-                             UserRepository userRepository) {
+                             JwtAccessDeniedHandler accessDeniedHandler,
+                             UserRepository userRepository,
+                             com.example.demo.infrastructure.monitoring.RequestActivityFilter requestActivityFilter) {
         this.userDetailsService = userDetailsService;
         this.jwtTokenProvider = jwtTokenProvider;
         this.authenticationEntryPoint = authenticationEntryPoint;
+        this.accessDeniedHandler = accessDeniedHandler;
         this.userRepository = userRepository;
+        this.requestActivityFilter = requestActivityFilter;
     }
 
     @Bean
@@ -39,18 +45,22 @@ public class WebSecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> {})
-                .exceptionHandling(exception -> exception.authenticationEntryPoint(authenticationEntryPoint))
+                .exceptionHandling(exception -> exception
+                    .authenticationEntryPoint(authenticationEntryPoint)
+                    .accessDeniedHandler(accessDeniedHandler))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                     .requestMatchers("/login", "/login.html", "/favicon.ico", "/css/**", "/js/**", "/images/**", "/webjars/**", "/api/auth/login", "/api/auth/register").permitAll()
                     // Permitir carga de páginas estáticas para que la SPA maneje el guardado/lectura del token
                     .requestMatchers("/", "/index.html", "/portal.html", "/ranking.html", "/observatorio.html", "/dashboard.html", "/admin.html", "/perfil.html").permitAll()
                         .requestMatchers("/api/auth/**", "/h2-console/**", "/ws/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/search/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/portal/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/dashboard/**").authenticated()
                         .anyRequest().authenticated())
                 .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(requestActivityFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

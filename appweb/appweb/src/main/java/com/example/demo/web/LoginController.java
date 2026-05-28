@@ -8,11 +8,11 @@ public class LoginController {
 
     @GetMapping("/login")
     public String login() {
-        return "forward:/login.html";
+        return "redirect:/login.html";
     }
 
     @GetMapping("/profile")
     public String profile() {
-        return "forward:/profile.html";
+        return "redirect:/profile.html";
     }
 }

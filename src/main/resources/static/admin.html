@@ -114,6 +114,103 @@
         }
         .role-item .ri { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
         .role-item:hover { background:var(--surface-hover); color:var(--text); }
+
+        /* Monitoreo en tiempo real */
+        .monitor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .monitor-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 16px;
+        }
+        .monitor-card small {
+            display: block;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+        .monitor-card strong {
+            color: var(--text);
+            font-size: 1.15rem;
+        }
+        .monitor-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .monitor-item {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 12px;
+            align-items: start;
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: 1px solid var(--card-border);
+            background: rgba(255,255,255,0.02);
+        }
+        .monitor-dot {
+            width: 10px; height: 10px; border-radius: 50%; margin-top: 6px;
+            background: var(--accent);
+            box-shadow: 0 0 0 4px rgba(0,200,220,.12);
+        }
+        .monitor-main {
+            min-width: 0;
+        }
+        .monitor-main strong {
+            display: block;
+            color: var(--text);
+            font-size: .95rem;
+            margin-bottom: 4px;
+        }
+        .monitor-main p {
+            margin: 0;
+            color: var(--muted);
+            font-size: .82rem;
+            line-height: 1.45;
+        }
+        .monitor-side {
+            text-align: right;
+            min-width: 110px;
+        }
+        .monitor-time {
+            color: var(--muted);
+            font-size: .78rem;
+            margin-bottom: 5px;
+        }
+        .monitor-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px 9px;
+            border-radius: 999px;
+            font-size: .7rem;
+            font-weight: 700;
+            letter-spacing: .4px;
+            text-transform: uppercase;
+        }
+        .monitor-badge.login { background: rgba(34,197,94,.12); color:#4ade80; }
+        .monitor-badge.logout { background: rgba(248,113,113,.12); color:#f87171; }
+        .monitor-badge.register { background: rgba(59,130,246,.12); color:#60a5fa; }
+        .monitor-badge.request { background: rgba(6,182,212,.12); color:#22d3ee; }
+        .monitor-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .monitor-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.08);
+            color: var(--muted);
+            font-size: .72rem;
+        }
     </style>
 </head>
 <body data-requires-auth="true">
@@ -125,7 +222,7 @@
             <a href="/portal.html">Verificar SOAT</a>
             <a href="/ranking.html">Ranking</a>
             <a href="/observatorio.html">Observatorio</a>
-            <a href="/dashboard.html" class="nav-auth" style="display:none">Dashboard</a>
+            <a href="/dashboard.html" class="nav-auth" style="display:none">Panel de control</a>
             <a href="/admin.html" class="nav-auth" style="display:none">Administración</a>
         </nav>
         <div class="nav-right">
@@ -148,7 +245,7 @@
             <button class="tab-btn" onclick="switchTab('pos')">Puntos de Venta</button>
             <button class="tab-btn" onclick="switchTab('vouchers')">Vouchers</button>
             <button class="tab-btn" onclick="switchTab('policies')">Pólizas</button>
-            <button class="tab-btn" onclick="switchTab('fraud')">Detección Fraude</button>
+            <button class="tab-btn" id="monitoringTabBtn" onclick="switchTab('monitoring')">Monitoreo</button>
         </div>
 
         <!-- ─── USUARIOS ─── -->
@@ -210,13 +307,14 @@
             </div>
         </div>
 
-        <!-- ─── FRAUDE ─── -->
-        <div id="tab-fraud" class="tab-panel">
+        <!-- ─── MONITOREO ─── -->
+        <div id="tab-monitoring" class="tab-panel">
             <div class="section-header">
-                <h2>Vouchers con sospecha de fraude</h2>
-                <button class="btn-secondary btn-sm" onclick="loadFraud()">↻ Actualizar</button>
+                <h2>Monitoreo en tiempo real</h2>
+                <button class="btn-secondary btn-sm" onclick="loadMonitoring()">↻ Actualizar</button>
             </div>
-            <div id="fraudList"></div>
+            <div class="monitor-grid" id="monitoringStats"></div>
+            <div class="monitor-feed" id="monitoringFeed"></div>
         </div>
     </main>
 
@@ -310,6 +408,22 @@
         if (!token) { window.location.href = '/login'; }
 
         const H = () => ({ 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' });
+        const tokenPayload = (() => {
+            try {
+                const payload = token.split('.')[1];
+                return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')));
+            } catch (error) {
+                return null;
+            }
+        })();
+        const isSuperadmin = (() => {
+            const rolesValue = tokenPayload?.roles || '';
+            const roles = Array.isArray(rolesValue)
+                ? rolesValue
+                : String(rolesValue).split(',').map(role => role.trim()).filter(Boolean);
+            return roles.includes('ROLE_SUPERADMIN') || roles.includes('SUPERADMIN');
+        })();
+        let monitoringTimer = null;
 
         function showToast(msg, type = 'success') {
             const t = document.getElementById('toast');
@@ -318,9 +432,92 @@
             setTimeout(() => t.className = 'toast', 3000);
         }
 
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function formatActivityTime(value) {
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return '—';
+            return date.toLocaleString('es-PE', { hour12: false });
+        }
+
+        function getActivityRoles(activity) {
+            const roles = activity.roles;
+            if (Array.isArray(roles)) return roles.join(', ');
+            if (typeof roles === 'string') return roles;
+            return '—';
+        }
+
+        function getActivityBadgeClass(type) {
+            const normalized = String(type || '').toLowerCase();
+            return normalized === 'login' ? 'login'
+                : normalized === 'logout' ? 'logout'
+                : normalized === 'register' ? 'register'
+                : 'request';
+        }
+
+        function formatActivityDetails(activity) {
+            const raw = String(activity?.details || '').trim();
+            const httpMatch = raw.match(/^(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s+(.+)$/i);
+            if (httpMatch) {
+                return `Solicitud a ${httpMatch[2]}`;
+            }
+            return raw || 'Actividad registrada';
+        }
+
+        function setMonitoringVisibility() {
+            const btn = document.getElementById('monitoringTabBtn');
+            const panel = document.getElementById('tab-monitoring');
+            if (!isSuperadmin) {
+                if (btn) btn.style.display = 'none';
+                if (panel) panel.style.display = 'none';
+            }
+        }
+
+        function tabLabel(name) {
+            const labels = {
+                users: 'Usuarios',
+                pos: 'Puntos de Venta',
+                vouchers: 'Vouchers',
+                policies: 'Polizas',
+                monitoring: 'Monitoreo'
+            };
+            return labels[name] || name;
+        }
+
+        async function trackTabNavigation(name) {
+            try {
+                await fetch('/api/admin/monitoring/ui-event', {
+                    method: 'POST',
+                    headers: H(),
+                    body: JSON.stringify({
+                        eventType: 'TAB_NAVIGATION',
+                        tab: tabLabel(name)
+                    })
+                });
+            } catch (error) {
+                // Silencioso: no bloquear la navegacion de la UI.
+            }
+        }
+
         // ── TABS ──
-        const tabNames = ['users','pos','vouchers','policies','fraud'];
+        const tabNames = ['users','pos','vouchers','policies','monitoring'];
         function switchTab(name) {
+            if (name === 'monitoring' && !isSuperadmin) {
+                name = 'users';
+            }
+
+            const currentTab = tabNames.find(tab => {
+                const panel = document.getElementById('tab-' + tab);
+                return panel && panel.classList.contains('active');
+            });
+
             tabNames.forEach(t => {
                 document.getElementById('tab-' + t).classList.remove('active');
             });
@@ -328,8 +525,19 @@
             document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.remove('active'));
             document.querySelectorAll('.tab-btn')[tabNames.indexOf(name)].classList.add('active');
 
-            const loaders = { users: loadUsers, pos: loadPOS, vouchers: loadVouchers, policies: loadPolicies, fraud: loadFraud };
+            const loaders = { users: loadUsers, pos: loadPOS, vouchers: loadVouchers, policies: loadPolicies, monitoring: loadMonitoring };
+            if (monitoringTimer) {
+                clearInterval(monitoringTimer);
+                monitoringTimer = null;
+            }
+            if (name === 'monitoring' && isSuperadmin) {
+                monitoringTimer = setInterval(loadMonitoring, 4000);
+            }
             if (loaders[name]) loaders[name]();
+
+            if (currentTab !== name) {
+                trackTabNavigation(name);
+            }
         }
 
         // Handle anchor-based tab navigation
@@ -337,6 +545,8 @@
             const h = window.location.hash.replace('#','');
             if (tabNames.includes(h)) switchTab(h);
         }
+
+        setMonitoringVisibility();
 
         // ── MODALS ──
         function openModal(id) { document.getElementById(id).classList.add('open'); }
@@ -524,9 +734,47 @@
         // ── VOUCHERS ──
         async function loadVouchers() {
             try {
-                const res = await fetch('/api/vouchers', { headers: H() });
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                const data = await res.json();
+                async function fetchVoucherList(url) {
+                    const res = await fetch(url, {
+                        headers: {
+                            ...H(),
+                            'Accept': 'application/json'
+                        }
+                    });
+                    const raw = await res.text();
+                    let data = [];
+
+                    if (raw && raw.trim()) {
+                        try {
+                            data = JSON.parse(raw);
+                        } catch (_) {
+                            const looksLikeHtml = /<!doctype html|<html/i.test(raw);
+                            if (looksLikeHtml || res.redirected) {
+                                throw new Error('Sesion expirada o redireccion no valida');
+                            }
+                            throw new Error('Respuesta invalida del servidor');
+                        }
+                    }
+
+                    if (!res.ok) {
+                        const msg = data && typeof data === 'object' && data.message ? data.message : ('HTTP ' + res.status);
+                        throw new Error(msg);
+                    }
+                    return data;
+                }
+
+                let data;
+                try {
+                    data = await fetchVoucherList('/api/admin/vouchers');
+                } catch (e) {
+                    // Compatibilidad: algunas instancias aún exponen el listado en /api/vouchers.
+                    if (String(e.message || '').includes('HTTP 404')) {
+                        data = await fetchVoucherList('/api/vouchers');
+                    } else {
+                        throw e;
+                    }
+                }
+
                 const tbody = document.getElementById('vouchersBody');
                 if (!Array.isArray(data) || !data.length) {
                     tbody.innerHTML = '<tr><td colspan="7" class="alert-empty">Sin vouchers registrados</td></tr>'; return;
@@ -617,25 +865,65 @@
                 </tr>`;}).join('');
         }
 
-        // ── FRAUDE ──
-        async function loadFraud() {
-            const el = document.getElementById('fraudList');
+        async function loadMonitoring() {
+            if (!isSuperadmin) return;
+
+            const feedEl = document.getElementById('monitoringFeed');
+            const statsEl = document.getElementById('monitoringStats');
             try {
-                const res = await fetch('/api/reports/fraud/detected', { headers: H() });
+                const res = await fetch('/api/admin/monitoring/activities?limit=50', { headers: H() });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
                 const data = await res.json();
-                if (!data.length) { el.innerHTML = '<div class="alert-empty">✅ Sin vouchers sospechosos detectados</div>'; return; }
-                el.innerHTML = `<div class="table-wrap"><table class="table">
-                    <thead><tr><th>N° Operación</th><th>Banco</th><th>Monto</th><th>Fecha</th><th>Registrado por</th></tr></thead>
-                    <tbody>${data.map(v=>`<tr>
-                        <td><code style="color:var(--danger)">${v.operationNumber}</code></td>
-                        <td>${v.bank}</td>
-                        <td>S/ ${Number(v.amount).toFixed(2)}</td>
-                        <td>${v.operationDate||'—'}</td>
-                        <td>${v.registeredBy||'—'}</td>
-                    </tr>`).join('')}</tbody>
-                </table></div>`;
-            } catch(e) {
-                el.innerHTML = '<div class="alert"><strong>Error</strong><p>No se pudo cargar la lista de fraude.</p></div>';
+                const activities = Array.isArray(data) ? data : [];
+
+                const uniqueUsers = new Set(activities.map(item => item.actor).filter(Boolean)).size;
+                const activeIps = new Set(activities.map(item => item.ip).filter(Boolean)).size;
+                const lastEvent = activities[0];
+
+                statsEl.innerHTML = `
+                    <div class="monitor-card"><small>Eventos recientes</small><strong>${activities.length}</strong></div>
+                    <div class="monitor-card"><small>Usuarios observados</small><strong>${uniqueUsers}</strong></div>
+                    <div class="monitor-card"><small>IPs activas</small><strong>${activeIps}</strong></div>
+                    <div class="monitor-card"><small>Último evento</small><strong>${lastEvent ? escapeHtml(lastEvent.type) : '—'}</strong></div>
+                `;
+
+                if (!activities.length) {
+                    feedEl.innerHTML = '<div class="alert-empty">Aún no hay actividad para mostrar.</div>';
+                    return;
+                }
+
+                feedEl.innerHTML = activities.map(activity => {
+                    const type = escapeHtml(activity.type || 'REQUEST');
+                    const actor = escapeHtml(activity.actor || '—');
+                    const roles = escapeHtml(getActivityRoles(activity));
+                    const ip = escapeHtml(activity.ip || '—');
+                    const details = escapeHtml(formatActivityDetails(activity));
+                    const status = Number(activity.status || 0);
+                    const statusClass = status >= 400 ? 'high' : 'low';
+
+                    return `
+                        <article class="monitor-item">
+                            <div class="monitor-dot"></div>
+                            <div class="monitor-main">
+                                <strong>${actor}</strong>
+                                <p>${details}</p>
+                                <div class="monitor-meta">
+                                    <span class="monitor-pill">${roles}</span>
+                                    <span class="monitor-pill">IP ${ip}</span>
+                                    <span class="monitor-pill">${status} ${escapeHtml(activity.durationMs != null ? activity.durationMs + 'ms' : '')}</span>
+                                </div>
+                            </div>
+                            <div class="monitor-side">
+                                <div class="monitor-time">${formatActivityTime(activity.timestamp)}</div>
+                                <span class="monitor-badge ${getActivityBadgeClass(type)}">${type}</span>
+                                <div style="margin-top:8px"><span class="badge ${statusClass}">${status || '—'}</span></div>
+                            </div>
+                        </article>
+                    `;
+                }).join('');
+            } catch (error) {
+                statsEl.innerHTML = '';
+                feedEl.innerHTML = '<div class="alert"><strong>Error</strong><p>No se pudo cargar el monitoreo.</p></div>';
             }
         }
 

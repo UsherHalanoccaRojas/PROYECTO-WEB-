@@ -43,7 +43,15 @@
     <script src="/js/animations.js" defer></script>
     <script src="/js/nav-auth.js" defer></script>
     <script>
+        const rankColors = ['#f5b942', '#b9c2cf', '#cd7f32'];
+
         const badgeClass = ratio => ratio >= 5 ? 'high' : ratio >= 3 ? 'medium' : 'low';
+
+        const rankBadge = rank => {
+            const color = rankColors[rank - 1] || 'var(--muted)';
+            const border = rank <= 3 ? color : 'rgba(255,255,255,0.12)';
+            return `<span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.9rem;height:1.9rem;padding:0 .45rem;border-radius:999px;border:1px solid ${border};background:rgba(255,255,255,0.04);color:${color};font-weight:800;font-size:.92rem;line-height:1">${rank}</span>`;
+        };
 
         async function loadRanking() {
             const response = await fetch('/api/dashboard/ranking');
@@ -60,7 +68,7 @@
                 totalMorosidad += item.delinquency;
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td>${item.position}</td>
+                    <td style="text-align:center">${rankBadge(item.position || (tbody.children.length + 1))}</td>
                     <td>${item.name}</td>
                     <td>${item.city}</td>
                     <td>${item.sales}</td>

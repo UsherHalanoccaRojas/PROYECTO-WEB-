@@ -7,6 +7,49 @@
 document.addEventListener('DOMContentLoaded', () => {
   const AUTH_REDIRECT = '/login';
 
+  function safePageLabel(pathname) {
+    const labels = {
+      '/': 'Inicio',
+      '/index.html': 'Inicio',
+      '/portal.html': 'Verificar SOAT',
+      '/ranking.html': 'Ranking',
+      '/observatorio.html': 'Observatorio',
+      '/dashboard.html': 'Panel de control',
+      '/admin.html': 'Administracion',
+      '/perfil.html': 'Perfil',
+      '/login': 'Login',
+      '/login.html': 'Login'
+    };
+    return labels[pathname] || pathname;
+  }
+
+  function trackPageNavigation(pathname, origin) {
+    const token = localStorage.getItem('megaSoatToken');
+    if (!token) return;
+
+    const currentPath = pathname || window.location.pathname;
+    if (!currentPath || currentPath.startsWith('/api/')) return;
+
+    const payload = {
+      eventType: 'PAGE_NAVIGATION',
+      page: safePageLabel(currentPath),
+      path: currentPath,
+      origin: origin || 'unknown'
+    };
+
+    fetch('/api/admin/monitoring/ui-event', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload),
+      keepalive: true
+    }).catch(() => {
+      // No bloquear la UX por errores de tracking.
+    });
+  }
+
   function hasAuthToken() {
     return Boolean(localStorage.getItem('megaSoatToken'));
   }
@@ -18,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   window.requireAuth = requireAuth;
+  trackPageNavigation(window.location.pathname, 'page-load');
 
   // ══════════════════════════════════════
   // INYECTAR SISTEMA DE FONDO (4 capas)
@@ -114,8 +158,8 @@ document.addEventListener('DOMContentLoaded', () => {
       function renderThemeBtn(btn) {
         const isDark = getTheme() === 'dark';
         btn.innerHTML = isDark
-          ? '<span class="theme-icon">☀️</span><span class="theme-label">Claro</span>'
-          : '<span class="theme-icon">🌙</span><span class="theme-label">Oscuro</span>';
+          ? '<span class="theme-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="5"></line><line x1="12" y1="19" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.05" y2="7.05"></line><line x1="16.95" y1="16.95" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="5" y2="12"></line><line x1="19" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.05" y2="16.95"></line><line x1="16.95" y1="7.05" x2="19.07" y2="4.93"></line></svg></span><span class="theme-label">Claro</span>'
+          : '<span class="theme-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"></path></svg></span><span class="theme-label">Oscuro</span>';
         btn.setAttribute('title', isDark ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro');
       }
       const themeBtn = document.createElement('button');
@@ -189,9 +233,8 @@ document.addEventListener('DOMContentLoaded', () => {
         searchTimer = setTimeout(async () => {
           try {
             const token = localStorage.getItem('megaSoatToken');
-            const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, {
-              headers: { 'Authorization': 'Bearer ' + token }
-            });
+            const headers = token ? { 'Authorization': 'Bearer ' + token } : {};
+            const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`, { headers });
             if (!res.ok) { resultsEl.innerHTML = '<p class="search-hint">Error al buscar</p>'; return; }
             const data = await res.json();
             renderResults(resultsEl, data, q);
@@ -305,7 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
       { href: '/portal.html',     label: '🔍 Verificar SOAT' },
       { href: '/ranking.html',    label: '🏆 Ranking' },
       { href: '/observatorio.html', label: '🗺️ Observatorio' },
-      { href: '/dashboard.html',  label: '📊 Dashboard',     auth: true },
+      { href: '/dashboard.html',  label: '📊 Panel de control',     auth: true },
       { href: '/admin.html',      label: '⚙️ Administración', auth: true },
       { href: '/perfil.html',     label: '👤 Mi Perfil',      auth: true },
     ];
@@ -322,7 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Botón de tema en drawer ──
     function renderDrawerThemeBtn(btn) {
       const isDark = (document.documentElement.getAttribute('data-theme') || 'dark') === 'dark';
-      btn.textContent = isDark ? '☀️  Cambiar a Claro' : '🌙  Cambiar a Oscuro';
+      btn.textContent = isDark ? 'Cambiar a Claro' : 'Cambiar a Oscuro';
     }
     const drawerThemeBtn = document.createElement('button');
     drawerThemeBtn.className = 'btn-secondary mobile-drawer-logout theme-toggle-drawer';
@@ -336,8 +379,8 @@ document.addEventListener('DOMContentLoaded', () => {
       document.querySelectorAll('.theme-toggle').forEach(b => {
         const isDark = next === 'dark';
         b.innerHTML = isDark
-          ? '<span class="theme-icon">☀️</span><span class="theme-label">Claro</span>'
-          : '<span class="theme-icon">🌙</span><span class="theme-label">Oscuro</span>';
+          ? '<span class="theme-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2" x2="12" y2="5"></line><line x1="12" y1="19" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.05" y2="7.05"></line><line x1="16.95" y1="16.95" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="5" y2="12"></line><line x1="19" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.05" y2="16.95"></line><line x1="16.95" y1="7.05" x2="19.07" y2="4.93"></line></svg></span><span class="theme-label">Claro</span>'
+          : '<span class="theme-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"></path></svg></span><span class="theme-label">Oscuro</span>';
       });
     });
     linksContainer.appendChild(drawerThemeBtn);
@@ -459,6 +502,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!href || href.startsWith('#') || href.startsWith('http') || href.startsWith('mailto') || href.startsWith('javascript')) return;
     a.addEventListener('click', e => {
       e.preventDefault();
+
+      const targetPath = href.startsWith('/') ? href.split('?')[0] : null;
+      if (targetPath) {
+        trackPageNavigation(targetPath, 'link-click');
+      }
+
       const loading = createLoadingOverlay();
       requestAnimationFrame(() => loading.classList.add('show'));
       document.body.classList.add('page-exit');

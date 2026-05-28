@@ -140,7 +140,7 @@
             <a href="/portal.html">Verificar SOAT</a>
             <a href="/ranking.html">Ranking</a>
             <a href="/observatorio.html">Observatorio</a>
-            <a href="/dashboard.html" class="nav-auth" style="display:none">Dashboard</a>
+            <a href="/dashboard.html" class="nav-auth" style="display:none">Panel de control</a>
             <a href="/admin.html" class="nav-auth" style="display:none">Administración</a>
         </nav>
         <div class="nav-right">
@@ -403,7 +403,7 @@
                 const atRisk     = data.filter(p => p.risk !== 'bajo');
 
                 if (atRisk.length === 0) {
-                    alertsEl.innerHTML = '<div class="alert-empty">✅ Sin puntos de venta en riesgo medio o alto</div>';
+                    alertsEl.innerHTML = '<div class="alert-empty">Sin puntos de venta en riesgo medio o alto</div>';
                     alertCount.style.display = 'none';
                 } else {
                     alertCount.textContent    = atRisk.length + ' alertas';
@@ -416,7 +416,7 @@
                             <div class="alert ${p.risk === 'medio' ? 'medium' : ''}" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
                                 <div>
                                     <strong>${p.name}</strong>
-                                    <p style="margin:3px 0 0">📍 ${p.city} · SOAT vendidos: ${p.sales}</p>
+                                    <p style="margin:3px 0 0">${p.city} · SOAT vendidos: ${p.sales}</p>
                                 </div>
                                 <div style="display:flex;align-items:center;gap:10px;flex-shrink:0">
                                     <div style="text-align:right">
