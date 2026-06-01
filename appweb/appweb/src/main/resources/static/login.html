@@ -124,7 +124,7 @@
                 }));
 
                 setTimeout(() => {
-                    window.location.href = '/';
+                    window.location.replace('/dashboard.html');
                 }, 400);
             } catch (error) {
                 showMessage(error.message || 'Error de autenticación', 'error');

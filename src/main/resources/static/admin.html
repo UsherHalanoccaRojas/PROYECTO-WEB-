@@ -295,8 +295,7 @@
             <div class="section-header">
                 <h2>Pólizas SOAT</h2>
                 <div class="search-bar" style="margin-bottom:0;flex:1;max-width:400px;margin-left:16px">
-                    <input id="policySearchInput" type="text" placeholder="Buscar por placa...">
-                    <button class="btn-secondary btn-sm" onclick="searchPolicies()">Buscar</button>
+                    <!-- Búsqueda por placa deshabilitada -->
                 </div>
             </div>
             <div class="table-wrap" style="margin-top:16px">
@@ -768,7 +767,9 @@
                     data = await fetchVoucherList('/api/admin/vouchers');
                 } catch (e) {
                     // Compatibilidad: algunas instancias aún exponen el listado en /api/vouchers.
-                    if (String(e.message || '').includes('HTTP 404')) {
+                    const fallbackAllowed = String(e.message || '').includes('HTTP 404') ||
+                        String(e.message || '').includes('Sesion expirada o redireccion no valida');
+                    if (fallbackAllowed) {
                         data = await fetchVoucherList('/api/vouchers');
                     } else {
                         throw e;
@@ -840,14 +841,7 @@
             }
         }
 
-        async function searchPolicies() {
-            const plate = document.getElementById('policySearchInput').value.trim();
-            if (!plate) { loadPolicies(); return; }
-            try {
-                const res = await fetch(`/api/portal/policies/search?plate=${encodeURIComponent(plate)}`, { headers: H() });
-                renderPolicies(await res.json());
-            } catch(e) {}
-        }
+        // Búsqueda de pólizas deshabilitada en esta instancia
 
         function renderPolicies(data) {
             const tbody = document.getElementById('policiesBody');

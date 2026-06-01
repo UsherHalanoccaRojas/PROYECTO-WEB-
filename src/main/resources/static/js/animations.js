@@ -175,8 +175,9 @@ document.addEventListener('DOMContentLoaded', () => {
       navRight.insertBefore(themeBtn, navRight.firstChild);
     }
 
-    // ── BÚSQUEDA GLOBAL ──
-    if (navRight) {
+    // ── BÚSQUEDA GLOBAL (DESACTIVADA) ──
+    // Desactivada porque la funcionalidad de búsqueda fue retirada del sistema.
+    if (navRight && false) {
       const searchBtn = document.createElement('button');
       searchBtn.className = 'global-search-btn';
       searchBtn.setAttribute('title', 'Buscar (Ctrl+K)');

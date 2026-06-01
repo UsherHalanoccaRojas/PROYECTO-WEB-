@@ -50,8 +50,11 @@ import java.time.LocalTime;
         @Column(name = "fecha_validacion")
         private LocalDateTime validatedAt;
 
+        @Transient
         private boolean duplicate;
+        @Transient
         private boolean reconciled;
+        @Transient
         private boolean fraudSuspected;
 
         public Voucher() {

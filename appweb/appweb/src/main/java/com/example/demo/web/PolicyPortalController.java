@@ -21,12 +21,6 @@ public class PolicyPortalController {
     public ResponseEntity<List<Policy>> listActivePolicies() {
         return ResponseEntity.ok(policyPortalPort.listActivePolicies());
     }
-
-    @GetMapping("/policies/search")
-    public ResponseEntity<List<Policy>> findByPlate(@RequestParam String plate) {
-        return ResponseEntity.ok(policyPortalPort.findByVehiclePlate(plate));
-    }
-
     @GetMapping("/policies/{policyNumber}")
     public ResponseEntity<Policy> findByPolicyNumber(@PathVariable String policyNumber) {
         return policyPortalPort.findByPolicyNumber(policyNumber)
